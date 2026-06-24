@@ -67,6 +67,11 @@ module.exports = async function messageHandler(message, user) {
   }
 
   if (text === BTN.ORDERS) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { orderStep: null, pendingOrderId: null },
+    });
+    user = await reloadUser(user.id);
     await orderHandler.showMyOrders(user, chatId);
     return;
   }
@@ -106,6 +111,14 @@ module.exports = async function messageHandler(message, user) {
     return;
   }
 
+  if (text.startsWith("PL-") && !isAdmin(user)) {
+    const shown = await orderHandler.showOrderByTracking(user, chatId, text);
+    if (!shown) {
+      await reply(user, chatId, "❌ سفارشی با این کد پیگیری یافت نشد.\nلطفاً کد را بررسی و دوباره ارسال کنید.");
+    }
+    return;
+  }
+
   if (user.orderStep === "PRODUCT_QTY") {
     const qty = parseInt(text, 10);
     if (!qty || qty < 1 || qty > 999) {
@@ -127,14 +140,6 @@ module.exports = async function messageHandler(message, user) {
       text.replace("📂 ", "")
     );
     return;
-  }
-
-  if (text.startsWith("PL-")) {
-    if (isAdmin(user)) {
-      return;
-    }
-    const shown = await orderHandler.showOrderByTracking(user, chatId, text);
-    if (shown) return;
   }
 
   const product = await prisma.product.findUnique({
