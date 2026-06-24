@@ -306,6 +306,27 @@ module.exports.showOrderByTracking = async function showOrderByTracking(
 
   if (!order) return false;
 
+  if (order.status === "WAITING_PAYMENT") {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { adminStep: null, orderStep: "UPLOAD_RECEIPT", pendingOrderId: order.id },
+    });
+
+    const invoice = buildInvoiceText(order, order.items);
+    await reply(
+      user,
+      chatId,
+      `${invoice}\n\n${buildShippingInfo()}\n\n${buildPaymentInfo()}`,
+      paymentMenu()
+    );
+    return true;
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { adminStep: null },
+  });
+
   let detail = `🔖 کد پیگیری: ${order.trackingCode}\n`;
   detail += `📊 وضعیت: ${statusLabel(order.status)}\n`;
   detail += `\n📦 اقلام سفارش:\n\n`;
