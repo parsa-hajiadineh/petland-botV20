@@ -1,0 +1,60 @@
+const prisma = require("../database/prisma");
+const bale = require("../bot/bale");
+
+async function clearLastMessage(user, chatId) {
+  if (!user?.lastMessageId) return;
+
+  try {
+    await bale.deleteMessage(chatId, user.lastMessageId);
+  } catch (err) {
+    console.log("DELETE MESSAGE SKIP:", err.message);
+  }
+}
+
+async function reply(user, chatId, text, keyboard) {
+  await clearLastMessage(user, chatId);
+
+  const result = keyboard
+    ? await bale.sendKeyboard(chatId, text, keyboard)
+    : await bale.sendMessage(chatId, text);
+
+  const messageId = result?.result?.message_id;
+
+  if (messageId && user?.id) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastMessageId: messageId },
+    });
+    user.lastMessageId = messageId;
+  }
+
+  return result;
+}
+
+async function replyPhoto(user, chatId, photo, caption, keyboard) {
+  await clearLastMessage(user, chatId);
+
+  const result = await bale.sendPhoto(chatId, photo, caption, keyboard);
+  const messageId = result?.result?.message_id;
+
+  if (messageId && user?.id) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastMessageId: messageId },
+    });
+    user.lastMessageId = messageId;
+  }
+
+  return result;
+}
+
+async function notify(chatId, text) {
+  return bale.sendMessage(chatId, text);
+}
+
+module.exports = {
+  reply,
+  replyPhoto,
+  notify,
+  clearLastMessage,
+};

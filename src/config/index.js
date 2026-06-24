@@ -1,0 +1,20 @@
+require("dotenv").config();
+
+const parseIds = (value) =>
+  (value || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+module.exports = {
+  BOT_TOKEN: process.env.BOT_TOKEN,
+  PORT: process.env.PORT || 3000,
+  ADMIN_BALE_IDS: parseIds(process.env.ADMIN_BALE_IDS),
+  COLLEAGUE_ACCESS_CODE: process.env.COLLEAGUE_ACCESS_CODE || "petland1404",
+  DEFAULT_PROFIT_PERCENT: Number(process.env.DEFAULT_PROFIT_PERCENT || 15),
+  WHOLESALE_MIN_ORDER: Number(process.env.WHOLESALE_MIN_ORDER || 50000000),
+  SHOP_NAME: process.env.SHOP_NAME || "پت لند",
+  BANK_CARD: process.env.BANK_CARD || "",
+  BANK_HOLDER: process.env.BANK_HOLDER || "",
+  BANK_NAME: process.env.BANK_NAME || "",
+};

@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  COLLEAGUE
+}
+
+enum ProductStatus {
+  AVAILABLE
+  UNAVAILABLE
+}
+
+enum OrderStatus {
+  WAITING_PAYMENT
+  WAITING_APPROVAL
+  APPROVED
+  PACKAGING
+  SHIPPED
+  DELIVERED
+  REJECTED
+}
+
+enum TicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+model User {
+  id              String   @id @default(cuid())
+  baleId          String   @unique
+  fullName        String?
+  phone           String?
+
+  role            UserRole @default(CUSTOMER)
+
+  lastProductCode String?
+  lastMessageId   Int?
+
+  orderStep       String?
+  pendingOrderId  String?
+  activeTicketId  String?
+
+  tempProvince    String?
+  tempCity        String?
+  tempAddress     String?
+  tempPostalCode  String?
+  tempDescription String?
+  tempQuantity    Int?
+
+  adminStep       String?
+
+  createdAt       DateTime @default(now())
+
+  orders          Order[]
+  tickets         Ticket[]
+
+  cart            Cart?
+}
+model Category {
+  id           String    @id @default(cuid())
+  title        String
+  createdAt    DateTime  @default(now())
+
+  products     Product[]
+}
+
+model Product {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  title           String
+  description     String?
+  imageUrl        String?
+
+  costPrice       Int
+  profitPercent   Int
+
+  status          ProductStatus @default(AVAILABLE)
+
+  categoryId      String
+  category        Category @relation(fields: [categoryId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+
+  @@index([categoryId])
+}
+
+model Cart {
+  id         String   @id @default(cuid())
+
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  items      CartItem[]
+}
+
+model CartItem {
+  id         String @id @default(cuid())
+
+  quantity   Int @default(1)
+
+  cartId     String
+  cart       Cart @relation(fields: [cartId], references: [id])
+
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
+}
+
+model Order {
+  id             String       @id @default(cuid())
+  trackingCode   String       @unique
+  status         OrderStatus  @default(WAITING_PAYMENT)
+
+  fullName       String
+  phone          String
+  province       String
+  city           String
+  address        String
+  postalCode     String?
+
+  description    String?
+
+  totalAmount    Int          @default(0)
+  isWholesale    Boolean      @default(false)
+
+  receiptImage   String?
+  shipmentInfo   String?
+  rejectReason   String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  userId         String
+  user           User @relation(fields: [userId], references: [id])
+
+  items          OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id           String @id @default(cuid())
+
+  quantity     Int
+  unitPrice    Int
+
+  orderId      String
+  order        Order @relation(fields: [orderId], references: [id])
+
+  productId    String
+  product      Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Ticket {
+  id           String @id @default(cuid())
+
+  title        String
+
+  status       TicketStatus @default(OPEN)
+
+  createdAt    DateTime @default(now())
+
+  userId       String
+  user         User @relation(fields: [userId], references: [id])
+
+  messages     TicketMessage[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model TicketMessage {
+  id           String @id @default(cuid())
+
+  senderType   String
+  message      String
+
+  createdAt    DateTime @default(now())
+
+  ticketId     String
+  ticket       Ticket @relation(fields: [ticketId], references: [id])
+
+  @@index([ticketId])
+}

@@ -1,0 +1,32 @@
+{
+  "name": "petland-bot",
+  "version": "1.0.0",
+  "description": "PetLand Bale shop bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "seed": "node src/seed.js",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "build": "PRISMA_ENGINES_MIRROR=https://prisma.storage.iran.liara.site prisma generate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^6.17.1",
+    "axios": "^1.16.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "form-data": "^4.0.2",
+    "node-fetch": "^2.7.0",
+    "pdfkit": "^0.16.0",
+    "pg": "^8.21.0",
+    "prisma": "^6.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
