@@ -22,6 +22,8 @@ const BTN = {
   ADMIN_REJECTED: "❌ فاکتورهای رد شده",
   ADMIN_SHIPPED: "🚚 فاکتورهای ارسال شده",
   ADMIN_TICKETS: "🎫 مدیریت تیکت‌ها",
+  TICKET_OPEN: "📭 پاسخ داده نشده",
+  TICKET_ANSWERED: "📬 پاسخ داده شده",
   ADMIN_PRODUCTS: "📦 مدیریت محصولات",
   APPROVE: "✅ تایید فاکتور",
   REJECT: "❌ رد فاکتور",
@@ -131,6 +133,13 @@ function adminApprovedActions() {
   ]);
 }
 
+function adminTicketsMenu() {
+  return kb([
+    [{ text: BTN.TICKET_OPEN }, { text: BTN.TICKET_ANSWERED }],
+    [{ text: BTN.ADMIN_PANEL }],
+  ]);
+}
+
 function supportMenu() {
   return kb([
     [{ text: BTN.NEW_TICKET }],
@@ -157,6 +166,7 @@ module.exports = {
   adminMenu,
   adminOrderActions,
   adminApprovedActions,
+  adminTicketsMenu,
   supportMenu,
   activeTicketMenu,
   kb,

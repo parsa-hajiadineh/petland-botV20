@@ -7,6 +7,7 @@ const {
   adminMenu,
   adminOrderActions,
   adminApprovedActions,
+  adminTicketsMenu,
   kb,
 } = require("../keyboards/menus");
 const { buildInvoiceText, generateInvoicePdf } = require("../utils/invoice");
@@ -101,6 +102,18 @@ module.exports.handleAdmin = async function handleAdmin(user, chatId, text) {
     return true;
   }
 
+  if (text === BTN.TICKET_OPEN) {
+    const support = require("./support");
+    await support.adminOpenTickets(user, chatId);
+    return true;
+  }
+
+  if (text === BTN.TICKET_ANSWERED) {
+    const support = require("./support");
+    await support.adminAnsweredTickets(user, chatId, 0);
+    return true;
+  }
+
   if (text === BTN.ADMIN_PRODUCTS) {
     await reply(
       user,
@@ -185,6 +198,13 @@ module.exports.handleAdmin = async function handleAdmin(user, chatId, text) {
 
     const support = require("./support");
     await support.adminReplyTicket(user, chatId, ticketRef, message);
+    return true;
+  }
+
+  if (user.adminStep?.startsWith("REPLY_TICKET:")) {
+    const ticketId = user.adminStep.split(":").slice(1).join(":");
+    const support = require("./support");
+    await support.adminReplyTicketDirect(user, chatId, ticketId, text);
     return true;
   }
 

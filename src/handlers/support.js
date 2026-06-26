@@ -1,7 +1,7 @@
 const prisma = require("../database/prisma");
 const { ADMIN_BALE_IDS } = require("../config");
 const { reply, notify } = require("../bot/messenger");
-const { BTN, supportMenu, backMain, activeTicketMenu } = require("../keyboards/menus");
+const { BTN, supportMenu, backMain, activeTicketMenu, adminTicketsMenu, inlineKb } = require("../keyboards/menus");
 
 module.exports.showSupportMenu = async function showSupportMenu(user, chatId) {
   await reply(user, chatId, "🎫 پشتیبانی", supportMenu());
@@ -120,28 +120,121 @@ module.exports.handleSupport = async function handleSupport(
 };
 
 module.exports.adminListTickets = async function adminListTickets(user, chatId) {
+  await reply(user, chatId, "🎫 مدیریت تیکت‌ها", adminTicketsMenu());
+};
+
+module.exports.adminOpenTickets = async function adminOpenTickets(user, chatId) {
   const tickets = await prisma.ticket.findMany({
-    where: { status: { in: ["OPEN", "ANSWERED"] } },
+    where: { status: "OPEN" },
     orderBy: { createdAt: "desc" },
-    take: 15,
     include: { user: true },
   });
 
   if (!tickets.length) {
-    await reply(user, chatId, "تیکت بازی وجود ندارد.");
+    await reply(user, chatId, "✅ تیکت بی‌پاسخی وجود ندارد.", adminTicketsMenu());
     return;
   }
 
-  let text = "🎫 تیکت‌های باز\n\n";
-  for (const t of tickets) {
-    text += `#${t.id.slice(-6)} | ${t.title}\n`;
-    text += `کاربر: ${t.user.fullName || t.user.baleId}\n`;
-    text += `وضعیت: ${t.status}\n\n`;
+  const rows = tickets.map((t) => [{
+    text: `👤 ${t.user.fullName || t.user.baleId} — ${t.title.slice(0, 35)}`,
+    callback_data: `tkt:view:${t.id}`,
+  }]);
+
+  await reply(
+    user,
+    chatId,
+    `📭 تیکت‌های بی‌پاسخ (${tickets.length})\n\nروی تیکت کلیک کنید:`,
+    inlineKb(rows)
+  );
+};
+
+module.exports.adminAnsweredTickets = async function adminAnsweredTickets(user, chatId, offset = 0) {
+  const take = 10;
+  const tickets = await prisma.ticket.findMany({
+    where: { status: "ANSWERED" },
+    orderBy: { createdAt: "desc" },
+    skip: offset,
+    take: take + 1,
+    include: { user: true },
+  });
+
+  if (!tickets.length) {
+    await reply(user, chatId, "📭 تیکت پاسخ داده شده‌ای وجود ندارد.", adminTicketsMenu());
+    return;
   }
 
-  text += "برای پاسخ: #کد_تیکت را ارسال کنید\nمثال: #a1b2c3";
+  const hasMore = tickets.length > take;
+  const shown = tickets.slice(0, take);
 
-  await reply(user, chatId, text);
+  const rows = shown.map((t) => [{
+    text: `👤 ${t.user.fullName || t.user.baleId} — ${t.title.slice(0, 35)}`,
+    callback_data: `tkt:view:${t.id}`,
+  }]);
+
+  if (hasMore) {
+    rows.push([{ text: "⬅️ ۱۰ تیکت قدیمی‌تر", callback_data: `tkt:more:${offset + take}` }]);
+  }
+
+  await reply(
+    user,
+    chatId,
+    `📬 تیکت‌های پاسخ داده شده — صفحه ${Math.floor(offset / take) + 1}\n\nروی تیکت کلیک کنید:`,
+    inlineKb(rows)
+  );
+};
+
+module.exports.adminShowTicket = async function adminShowTicket(user, chatId, ticketId) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    include: { user: true, messages: { orderBy: { createdAt: "asc" } } },
+  });
+
+  if (!ticket) {
+    await reply(user, chatId, "تیکت پیدا نشد.");
+    return;
+  }
+
+  let text = `🎫 تیکت #${ticket.id.slice(-6)}\n`;
+  text += `👤 کاربر: ${ticket.user.fullName || ticket.user.baleId}\n`;
+  text += `📋 عنوان: ${ticket.title}\n`;
+  text += `📊 وضعیت: ${ticket.status === "OPEN" ? "⏳ بی‌پاسخ" : "✅ پاسخ داده شده"}\n`;
+  text += `━━━━━━━━━━━━━━━━━━\n\n`;
+
+  for (const msg of ticket.messages) {
+    const who = msg.senderType === "USER" ? "👤 کاربر" : "🔧 پشتیبانی";
+    text += `${who}:\n${msg.message}\n\n`;
+  }
+
+  if (ticket.status === "OPEN") {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { adminStep: `REPLY_TICKET:${ticket.id}` },
+    });
+    text += `━━━━━━━━━━━━━━━━━━\n✏️ پاسخ خود را تایپ و ارسال کنید:`;
+    await reply(user, chatId, text, backMain());
+  } else {
+    await reply(user, chatId, text, adminTicketsMenu());
+  }
+};
+
+module.exports.adminReplyTicketDirect = async function adminReplyTicketDirect(user, chatId, ticketId, message) {
+  await prisma.ticketMessage.create({
+    data: { ticketId, senderType: "ADMIN", message },
+  });
+
+  const ticket = await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { status: "ANSWERED" },
+    include: { user: true },
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { adminStep: null },
+  });
+
+  await notify(ticket.user.baleId, `🎫 پاسخ پشتیبانی\n\n${message}`);
+  await reply(user, chatId, "✅ پاسخ ارسال شد.", adminTicketsMenu());
 };
 
 module.exports.adminReplyTicket = async function adminReplyTicket(

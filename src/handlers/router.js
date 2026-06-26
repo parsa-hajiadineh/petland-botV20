@@ -192,6 +192,20 @@ module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user
     }
     return;
   }
+
+  if (data.startsWith("tkt:view:") && isAdmin(user)) {
+    const ticketId = data.replace("tkt:view:", "");
+    const support = require("./support");
+    await support.adminShowTicket(user, chatId, ticketId);
+    return;
+  }
+
+  if (data.startsWith("tkt:more:") && isAdmin(user)) {
+    const offset = parseInt(data.replace("tkt:more:", ""), 10) || 0;
+    const support = require("./support");
+    await support.adminAnsweredTickets(user, chatId, offset);
+    return;
+  }
 };
 
 module.exports.handlePhoto = async function handlePhoto(message, user) {
