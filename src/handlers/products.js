@@ -1,5 +1,6 @@
 const prisma = require("../database/prisma");
 const { reply, replyPhoto } = require("../bot/messenger");
+const bale = require("../bot/bale");
 const { BTN, kb, inlineKb, productDetailMenu } = require("../keyboards/menus");
 const {
   getUnitPrice,
@@ -57,20 +58,29 @@ module.exports.showCategory = async function showCategory(
 
   const wholesale = isWholesaleUser(user);
 
-  const rows = products.map((product) => {
+  const productRows = products.map((product) => {
     const price = getUnitPrice(product, wholesale);
     const availability = product.status === "AVAILABLE" ? "🟢" : "🔴";
     const label = `${availability} ${product.title} | ${formatPrice(price)}`;
     return [{ text: label, callback_data: `product:${product.code}` }];
   });
 
-  rows.push([{ text: "🔙 بازگشت به دسته‌بندی‌ها", callback_data: "cat:back" }]);
-
+  // ارسال keyboard عادی با دکمه بازگشت (tracked — حذف می‌شه در ناوبری بعدی)
   await reply(
     user,
     chatId,
-    `📂 ${category.title}\n\nبرای مشاهده جزئیات و افزودن به سبد روی محصول کلیک کنید:`,
-    inlineKb(rows)
+    `📂 ${category.title}`,
+    kb([
+      [{ text: BTN.BACK_PRODUCTS }],
+      [{ text: BTN.BACK_MAIN }],
+    ])
+  );
+
+  // ارسال لیست محصولات به صورت inline (بدون track)
+  await bale.sendKeyboard(
+    chatId,
+    `${products.length} محصول — روی هر محصول برای جزئیات کلیک کنید:`,
+    inlineKb(productRows)
   );
 };
 
