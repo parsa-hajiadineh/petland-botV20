@@ -181,6 +181,16 @@ module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user
     return;
   }
 
+  if (data === "main:back") {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { orderStep: null, adminStep: null, pendingOrderId: null },
+    });
+    user = await reloadUser(user.id);
+    await startHandler(user, { chat: { id: chatId } });
+    return;
+  }
+
   if (data === "cat:back") {
     await productsHandler(user, chatId);
     return;

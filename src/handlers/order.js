@@ -269,6 +269,8 @@ module.exports.showMyOrders = async function showMyOrders(user, chatId) {
     return [{ text: label, callback_data: order.trackingCode }];
   });
 
+  rows.push([{ text: "🏠 بازگشت به منوی اصلی", callback_data: "main:back" }]);
+
   await reply(
     user,
     chatId,
@@ -317,6 +319,11 @@ module.exports.showOrderByTracking = async function showOrderByTracking(
 
   let detail = `🔖 کد پیگیری: ${order.trackingCode}\n`;
   detail += `📊 وضعیت: ${statusLabel(order.status)}\n`;
+
+  if (order.status === "REJECTED" && order.rejectReason) {
+    detail += `❌ دلیل رد: ${order.rejectReason}\n`;
+  }
+
   detail += `\n📦 اقلام سفارش:\n\n`;
 
   for (const item of order.items) {
@@ -327,6 +334,10 @@ module.exports.showOrderByTracking = async function showOrderByTracking(
 
   detail += `━━━━━━━━━━━━━━━━━━\n`;
   detail += `💰 جمع کل: ${order.totalAmount.toLocaleString("fa-IR")} تومان`;
+
+  if (order.shipmentInfo) {
+    detail += `\n\n🚚 اطلاعات ارسال: ${order.shipmentInfo}`;
+  }
 
   await reply(user, chatId, detail, backMain());
   return true;
