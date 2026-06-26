@@ -31,6 +31,7 @@
 - **تصمیم:** `orderStep`، `adminStep` و فیلدهای temp روی مدل `User` در DB ذخیره می‌شوند
 - **دلیل:** [استنتاج] ساده‌ترین راه حل برای persistence بین پیام‌ها — in-memory از restart زنده نمی‌ماند
 - **پیامد:** هر پیام ورودی حداقل یک DB read+write انجام می‌دهد
+- **توسعه:** `adminStep = "VIEW_MY_ORDERS"` برای bypass کردن admin handler هنگام مشاهده سفارشات شخصی توسط ادمین استفاده می‌شود
 
 ---
 
