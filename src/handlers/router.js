@@ -1,7 +1,7 @@
 const prisma = require("../database/prisma");
 const { reloadUser } = require("../services/user");
 const { isAdmin } = require("../services/user");
-const { BTN } = require("../keyboards/menus");
+const { BTN, backMain } = require("../keyboards/menus");
 const { reply } = require("../bot/messenger");
 
 const productsHandler = require("./products");
@@ -204,6 +204,47 @@ module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user
     const offset = parseInt(data.replace("tkt:more:", ""), 10) || 0;
     const support = require("./support");
     await support.adminAnsweredTickets(user, chatId, offset);
+    return;
+  }
+
+  if (data.startsWith("ordr:") && isAdmin(user)) {
+    const orderId = data.replace("ordr:", "");
+    await adminHandler.viewOrderById(user, chatId, orderId);
+    return;
+  }
+
+  if (data.startsWith("rej_more:") && isAdmin(user)) {
+    const offset = parseInt(data.replace("rej_more:", ""), 10) || 0;
+    await adminHandler.showRejectedOrders(user, chatId, offset);
+    return;
+  }
+
+  if (data.startsWith("shipd_more:") && isAdmin(user)) {
+    const offset = parseInt(data.replace("shipd_more:", ""), 10) || 0;
+    await adminHandler.showShippedOrders(user, chatId, offset);
+    return;
+  }
+
+  if (data.startsWith("ship:snapp:") && isAdmin(user)) {
+    const orderId = data.replace("ship:snapp:", "");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { adminStep: "SHIP_SNAPP", pendingOrderId: orderId },
+    });
+    await reply(user, chatId,
+      "🚗 ارسال با اسنپ\n\nاطلاعات را در یک پیام ارسال کنید:\nشماره تماس راننده، پلاک، مدل ماشین",
+      backMain()
+    );
+    return;
+  }
+
+  if (data.startsWith("ship:post:") && isAdmin(user)) {
+    const orderId = data.replace("ship:post:", "");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { adminStep: "SHIP_POST", pendingOrderId: orderId },
+    });
+    await reply(user, chatId, "📦 ارسال با پست\n\nکد پیگیری مرسوله را وارد کنید:", backMain());
     return;
   }
 };
