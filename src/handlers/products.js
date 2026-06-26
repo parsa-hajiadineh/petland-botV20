@@ -1,6 +1,6 @@
 const prisma = require("../database/prisma");
 const { reply, replyPhoto } = require("../bot/messenger");
-const { BTN, kb, productDetailMenu } = require("../keyboards/menus");
+const { BTN, kb, inlineKb, productDetailMenu } = require("../keyboards/menus");
 const {
   getUnitPrice,
   formatPrice,
@@ -56,24 +56,20 @@ module.exports.showCategory = async function showCategory(
   }
 
   const wholesale = isWholesaleUser(user);
-  let text = `📂 ${category.title}\n\n`;
 
-  for (const product of products) {
+  const rows = products.map((product) => {
     const price = getUnitPrice(product, wholesale);
-    const status =
-      product.status === "AVAILABLE" ? "🟢 موجود" : "🔴 ناموجود";
+    const availability = product.status === "AVAILABLE" ? "🟢" : "🔴";
+    const label = `${availability} ${product.title} | ${formatPrice(price)}`;
+    return [{ text: label, callback_data: `product:${product.code}` }];
+  });
 
-    text += `📦 ${product.title}\n`;
-    text += `🔖 ${product.code} | 💰 ${formatPrice(price)}\n`;
-    text += `${status}\n\n`;
-  }
-
-  text += "برای جزئیات، کد محصول را ارسال کنید.";
-
-  await reply(user, chatId, text, kb([
-    [{ text: BTN.BACK_PRODUCTS }],
-    [{ text: BTN.BACK_MAIN }],
-  ]));
+  await reply(
+    user,
+    chatId,
+    `📂 ${category.title}\n\nبرای مشاهده جزئیات و افزودن به سبد روی محصول کلیک کنید:`,
+    inlineKb(rows)
+  );
 };
 
 module.exports.showProduct = async function showProduct(

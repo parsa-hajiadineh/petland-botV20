@@ -178,6 +178,19 @@ module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user
     if (!shown) {
       await reply(user, chatId, "❌ سفارشی با این کد پیگیری یافت نشد.");
     }
+    return;
+  }
+
+  if (data.startsWith("product:")) {
+    const code = data.replace("product:", "");
+    const product = await prisma.product.findUnique({
+      where: { code },
+      include: { category: true },
+    });
+    if (product) {
+      await productsHandler.showProduct(user, chatId, product);
+    }
+    return;
   }
 };
 
