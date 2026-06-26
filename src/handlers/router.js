@@ -21,7 +21,7 @@ module.exports = async function messageHandler(message, user) {
 
   user = await reloadUser(user.id);
 
-  if (text === BTN.BACK_MAIN || text === "/start") {
+  if (text === BTN.BACK_MAIN || text === "/start" || text.startsWith("/start ")) {
     await prisma.user.update({
       where: { id: user.id },
       data: {
