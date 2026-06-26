@@ -371,15 +371,14 @@ async function approveOrder(user, chatId) {
     // ارسال فاکتور PDF به کاربر
     try {
       const pdfPath = await generateInvoicePdf(order, order.items);
-      const sendResult = await bale.sendDocument(
+      await bale.sendDocument(
         owner.baleId,
         fs.createReadStream(pdfPath),
         `🧾 فاکتور رسمی ${order.trackingCode}`
       );
-      console.log("PDF SEND RESULT:", JSON.stringify(sendResult));
-      try { fs.unlinkSync(pdfPath); } catch (_) {}
+      fs.unlinkSync(pdfPath);
     } catch (err) {
-      console.error("PDF SEND ERROR:", err.message, err.stack);
+      console.log("PDF SEND ERROR:", err.message);
     }
 
     if (owner.referrerId) {

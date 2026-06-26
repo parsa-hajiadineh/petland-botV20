@@ -83,25 +83,19 @@ function buildShippingInfo() {
 }
 
 const FONT_PATH = path.join(__dirname, "..", "assets", "fonts", "VazirMatn-Regular.ttf");
+const LOGO_PATH = path.join(__dirname, "..", "assets", "logo.png");
 
-function findLogoPath() {
-  const candidates = [
-    path.join(__dirname, "..", "assets", "logo.png"),
-    path.join(__dirname, "..", "assets", "logo.jpg"),
-    path.join(__dirname, "..", "assets", "logo.jpeg"),
-  ];
-  return candidates.find((p) => fs.existsSync(p)) || null;
+function hasFontFile() {
+  return fs.existsSync(FONT_PATH);
 }
 
 async function generateInvoicePdf(order, items) {
-  const os = require("os");
-  const dir = path.join(os.tmpdir(), "petland-invoices");
+  const dir = path.join(process.cwd(), "tmp");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
   const filePath = path.join(dir, `${order.trackingCode}.pdf`);
-  const hasFont = fs.existsSync(FONT_PATH);
-  const logoPath = findLogoPath();
-  const hasLogo = !!logoPath;
+  const hasFont = hasFontFile();
+  const hasLogo = fs.existsSync(LOGO_PATH);
 
   await new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -137,7 +131,7 @@ async function generateInvoicePdf(order, items) {
 
     if (hasLogo) {
       try {
-        doc.image(logoPath, 40, headerTop, { width: 70, height: 70 });
+        doc.image(LOGO_PATH, 40, headerTop, { width: 70, height: 70 });
       } catch (_) {}
     }
 
