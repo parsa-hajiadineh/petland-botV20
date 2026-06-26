@@ -41,7 +41,7 @@ module.exports.startCheckout = async function startCheckout(user, chatId) {
     user,
     chatId,
     "📝 ثبت سفارش\n\n👤 نام و نام خانوادگی گیرنده را وارد کنید:",
-    checkoutSkipMenu()
+    backMain()
   );
 };
 
@@ -57,7 +57,7 @@ module.exports.handleCheckoutStep = async function handleCheckoutStep(
       where: { id: user.id },
       data: { fullName: text, orderStep: "CHECKOUT_PHONE" },
     });
-    await reply(user, chatId, "📱 شماره موبایل را وارد کنید:");
+    await reply(user, chatId, "📱 شماره موبایل را وارد کنید:", backMain());
     return true;
   }
 
@@ -66,7 +66,7 @@ module.exports.handleCheckoutStep = async function handleCheckoutStep(
       where: { id: user.id },
       data: { phone: text, orderStep: "CHECKOUT_PROVINCE" },
     });
-    await reply(user, chatId, "🏙 نام استان را وارد کنید:");
+    await reply(user, chatId, "🏙 نام استان را وارد کنید:", backMain());
     return true;
   }
 
@@ -75,7 +75,7 @@ module.exports.handleCheckoutStep = async function handleCheckoutStep(
       where: { id: user.id },
       data: { tempProvince: text, orderStep: "CHECKOUT_CITY" },
     });
-    await reply(user, chatId, "🏘 نام شهر را وارد کنید:");
+    await reply(user, chatId, "🏘 نام شهر را وارد کنید:", backMain());
     return true;
   }
 
@@ -84,7 +84,7 @@ module.exports.handleCheckoutStep = async function handleCheckoutStep(
       where: { id: user.id },
       data: { tempCity: text, orderStep: "CHECKOUT_ADDRESS" },
     });
-    await reply(user, chatId, "📍 آدرس کامل را وارد کنید:");
+    await reply(user, chatId, "📍 آدرس کامل را وارد کنید:", backMain());
     return true;
   }
 
@@ -93,7 +93,7 @@ module.exports.handleCheckoutStep = async function handleCheckoutStep(
       where: { id: user.id },
       data: { tempAddress: text, orderStep: "CHECKOUT_POSTAL" },
     });
-    await reply(user, chatId, "📮 کد پستی را وارد کنید:");
+    await reply(user, chatId, "📮 کد پستی را وارد کنید:", backMain());
     return true;
   }
 
