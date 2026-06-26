@@ -58,6 +58,10 @@ model User {
 
   adminStep       String?
 
+  referrerId      String?
+  referrer        User?    @relation("Referrals", fields: [referrerId], references: [id])
+  referrals       User[]   @relation("Referrals")
+
   createdAt       DateTime @default(now())
 
   orders          Order[]

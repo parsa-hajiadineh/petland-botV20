@@ -1,7 +1,7 @@
 const prisma = require("../database/prisma");
 const { ADMIN_BALE_IDS } = require("../config");
 
-async function getOrCreateUser(msg) {
+async function getOrCreateUser(msg, referrerBaleId = null) {
   const baleId = String(msg.from.id);
 
   let user = await prisma.user.findUnique({
@@ -9,11 +9,21 @@ async function getOrCreateUser(msg) {
   });
 
   if (!user) {
+    let referrerId = null;
+
+    if (referrerBaleId && referrerBaleId !== baleId) {
+      const referrer = await prisma.user.findUnique({
+        where: { baleId: referrerBaleId },
+      });
+      if (referrer) referrerId = referrer.id;
+    }
+
     user = await prisma.user.create({
       data: {
         baleId,
         fullName: msg.from.first_name || "",
         role: ADMIN_BALE_IDS.includes(baleId) ? "ADMIN" : "CUSTOMER",
+        ...(referrerId ? { referrerId } : {}),
       },
     });
   } else if (

@@ -5,6 +5,7 @@ const BTN = {
   SUPPORT: "🎫 پشتیبانی",
   HELP: "📖 راهنما",
   COLLEAGUE: "🤝 خرید همکار",
+  MARKETING: "📣 بازاریابی",
   BACK_MAIN: "🏠 بازگشت به منوی اصلی",
   BACK_PRODUCTS: "🔙 بازگشت به دسته‌بندی‌ها",
   ADD_CART: "➕ افزودن به سبد",
@@ -48,6 +49,7 @@ function mainMenu(user) {
     [{ text: BTN.PRODUCTS }],
     [{ text: BTN.CART }, { text: BTN.ORDERS }],
     [{ text: BTN.SUPPORT }, { text: BTN.HELP }],
+    [{ text: BTN.MARKETING }],
   ];
 
   if (user.role === "COLLEAGUE") {

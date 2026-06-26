@@ -3,7 +3,7 @@ const path = require("path");
 const PDFDocument = require("pdfkit");
 const { formatPrice } = require("./price");
 const { statusLabel } = require("./order");
-const { SHOP_NAME, BANK_CARD, BANK_HOLDER, BANK_NAME } = require("../config");
+const { SHOP_NAME, BANK_CARD, BANK_IBAN, BANK_HOLDER, BANK_NAME } = require("../config");
 
 function buildInvoiceText(order, items) {
   const lines = [
@@ -53,6 +53,7 @@ function buildPaymentInfo() {
   ];
 
   if (BANK_CARD) lines.push(`💳 شماره کارت: ${BANK_CARD}`);
+  if (BANK_IBAN) lines.push(`🔢 شماره شبا: ${BANK_IBAN}`);
   if (BANK_HOLDER) lines.push(`👤 به نام: ${BANK_HOLDER}`);
   if (BANK_NAME) lines.push(`🏦 بانک: ${BANK_NAME}`);
 

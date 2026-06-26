@@ -12,6 +12,7 @@ const helpHandler = require("./help");
 const supportHandler = require("./support");
 const adminHandler = require("./admin");
 const startHandler = require("./start");
+const marketingHandler = require("./marketing");
 
 module.exports = async function messageHandler(message, user) {
   const text = (message.text || "").trim();
@@ -51,6 +52,11 @@ module.exports = async function messageHandler(message, user) {
 
   if (text === BTN.HELP) {
     await helpHandler(user, chatId);
+    return;
+  }
+
+  if (text === BTN.MARKETING) {
+    await marketingHandler.showMarketing(user, chatId);
     return;
   }
 
@@ -178,6 +184,11 @@ module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user
     if (!shown) {
       await reply(user, chatId, "❌ سفارشی با این کد پیگیری یافت نشد.");
     }
+    return;
+  }
+
+  if (data === "ref:copy") {
+    await marketingHandler.handleCopyReferral(user, chatId);
     return;
   }
 

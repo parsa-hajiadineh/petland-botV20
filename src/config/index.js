@@ -15,6 +15,8 @@ module.exports = {
   WHOLESALE_MIN_ORDER: Number(process.env.WHOLESALE_MIN_ORDER || 50000000),
   SHOP_NAME: process.env.SHOP_NAME || "پت لند",
   BANK_CARD: process.env.BANK_CARD || "",
+  BANK_IBAN: process.env.BANK_IBAN || "",
   BANK_HOLDER: process.env.BANK_HOLDER || "",
   BANK_NAME: process.env.BANK_NAME || "",
+  BOT_USERNAME: process.env.BOT_USERNAME || "",
 };

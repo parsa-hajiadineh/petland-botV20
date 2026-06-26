@@ -29,7 +29,13 @@ async function processUpdate(update) {
   if (!update.message) return;
 
   const msg = update.message;
-  const user = await getOrCreateUser(msg);
+
+  let referrerBaleId = null;
+  if (msg.text && msg.text.startsWith("/start ref_")) {
+    referrerBaleId = msg.text.replace("/start ref_", "").trim();
+  }
+
+  const user = await getOrCreateUser(msg, referrerBaleId);
 
   if (msg.photo?.length) {
     await messageHandler.handlePhoto(msg, user);
