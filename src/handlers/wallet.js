@@ -68,11 +68,11 @@ module.exports.handleWithdrawalStep = async function handleWithdrawalStep(user, 
 
     const wallet = await getOrCreateWallet(user.id);
 
-    if (wallet.balance < amount) {
+    if (amount > wallet.balance) {
       await reply(
         user,
         chatId,
-        `❌ موجودی کافی نیست.\nموجودی فعلی: ${wallet.balance.toLocaleString("fa-IR")} تومان`,
+        `❌ مبلغ درخواستی بیشتر از موجودی کیف پول شماست.\n\nموجودی فعلی: ${wallet.balance.toLocaleString("fa-IR")} تومان\nمبلغ وارد شده: ${amount.toLocaleString("fa-IR")} تومان\n\nلطفاً مبلغی کمتر یا مساوی موجودی وارد کنید:`,
         backMain()
       );
       return true;
