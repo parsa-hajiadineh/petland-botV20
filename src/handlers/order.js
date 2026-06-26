@@ -2,6 +2,7 @@ const prisma = require("../database/prisma");
 const { ADMIN_BALE_IDS } = require("../config");
 const { reply, notify } = require("../bot/messenger");
 const { BTN, checkoutSkipMenu, paymentMenu, mainMenu, backMain, inlineKb } = require("../keyboards/menus");
+const bale = require("../bot/bale");
 const { validateCheckout } = require("./cart");
 const { getUnitPrice } = require("../utils/price");
 const {
@@ -269,14 +270,23 @@ module.exports.showMyOrders = async function showMyOrders(user, chatId) {
     return [{ text: label, callback_data: order.trackingCode }];
   });
 
-  rows.push([{ text: "🏠 بازگشت به منوی اصلی", callback_data: "main:back" }]);
+  // keyboard عادی با دکمه بازگشت (tracked — حذف می‌شه در ناوبری بعدی)
+  await reply(user, chatId, "📦 سفارشات من", backMain());
 
-  await reply(
-    user,
+  // لیست inline سفارشات + track برای حذف خودکار
+  const inlineResult = await bale.sendKeyboard(
     chatId,
-    "📦 سفارشات من\n\nبرای دیدن جزئیات هر سفارش روی آن کلیک کنید:",
+    "برای دیدن جزئیات هر سفارش روی آن کلیک کنید:",
     inlineKb(rows)
   );
+
+  const inlineMsgId = inlineResult?.result?.message_id;
+  if (inlineMsgId) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastMessageId: inlineMsgId },
+    });
+  }
 };
 
 module.exports.showOrderByTracking = async function showOrderByTracking(
