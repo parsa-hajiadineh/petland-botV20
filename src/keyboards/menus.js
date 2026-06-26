@@ -6,6 +6,9 @@ const BTN = {
   HELP: "📖 راهنما",
   COLLEAGUE: "🤝 خرید همکار",
   MARKETING: "📣 بازاریابی",
+  WALLET: "💰 کیف پول",
+  WITHDRAW_NEW: "💳 درخواست برداشت جدید",
+  WITHDRAW_HISTORY: "📋 تاریخچه برداشت",
   BACK_MAIN: "🏠 بازگشت به منوی اصلی",
   BACK_PRODUCTS: "🔙 بازگشت به دسته‌بندی‌ها",
   ADD_CART: "➕ افزودن به سبد",
@@ -26,6 +29,7 @@ const BTN = {
   TICKET_OPEN: "📭 پاسخ داده نشده",
   TICKET_ANSWERED: "📬 پاسخ داده شده",
   ADMIN_PRODUCTS: "📦 مدیریت محصولات",
+  ADMIN_WITHDRAWALS: "💸 درخواست‌های پورسانت",
   APPROVE: "✅ تایید فاکتور",
   REJECT: "❌ رد فاکتور",
   PACK: "📦 بسته‌بندی شد",
@@ -49,7 +53,7 @@ function mainMenu(user) {
     [{ text: BTN.PRODUCTS }],
     [{ text: BTN.CART }, { text: BTN.ORDERS }],
     [{ text: BTN.SUPPORT }, { text: BTN.HELP }],
-    [{ text: BTN.MARKETING }],
+    [{ text: BTN.MARKETING }, { text: BTN.WALLET }],
   ];
 
   if (user.role === "COLLEAGUE") {
@@ -108,6 +112,14 @@ function paymentMenu() {
   ]);
 }
 
+function walletMenu() {
+  return kb([
+    [{ text: BTN.WITHDRAW_NEW }],
+    [{ text: BTN.WITHDRAW_HISTORY }],
+    [{ text: BTN.BACK_MAIN }],
+  ]);
+}
+
 function adminMenu() {
   return kb([
     [{ text: BTN.ADMIN_PENDING }],
@@ -116,6 +128,7 @@ function adminMenu() {
     [{ text: BTN.ADMIN_SHIPPED }],
     [{ text: BTN.ADMIN_TICKETS }],
     [{ text: BTN.ADMIN_PRODUCTS }],
+    [{ text: BTN.ADMIN_WITHDRAWALS }],
     [{ text: BTN.BACK_MAIN }],
   ]);
 }
@@ -165,6 +178,7 @@ module.exports = {
   cartMenu,
   checkoutSkipMenu,
   paymentMenu,
+  walletMenu,
   adminMenu,
   adminOrderActions,
   adminApprovedActions,

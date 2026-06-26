@@ -34,6 +34,11 @@ enum TicketStatus {
   CLOSED
 }
 
+enum WithdrawalStatus {
+  PENDING
+  PAID
+}
+
 model User {
   id              String   @id @default(cuid())
   baleId          String   @unique
@@ -68,6 +73,7 @@ model User {
   tickets         Ticket[]
 
   cart            Cart?
+  wallet          Wallet?
 }
 model Category {
   id           String    @id @default(cuid())
@@ -206,4 +212,33 @@ model TicketMessage {
   ticket       Ticket @relation(fields: [ticketId], references: [id])
 
   @@index([ticketId])
+}
+
+model Wallet {
+  id          String   @id @default(cuid())
+  balance     Int      @default(0)
+
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+
+  withdrawals Withdrawal[]
+
+  createdAt   DateTime @default(now())
+}
+
+model Withdrawal {
+  id           String           @id @default(cuid())
+  amount       Int
+  cardNumber   String
+  cardHolder   String
+  status       WithdrawalStatus @default(PENDING)
+  trackingCode String?
+
+  walletId     String
+  wallet       Wallet @relation(fields: [walletId], references: [id])
+
+  createdAt    DateTime @default(now())
+
+  @@index([walletId])
+  @@index([status])
 }

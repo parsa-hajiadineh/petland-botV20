@@ -10,10 +10,12 @@ const {
   adminTicketsMenu,
   inlineKb,
   kb,
+  backMain,
 } = require("../keyboards/menus");
 const { buildInvoiceText, generateInvoicePdf } = require("../utils/invoice");
 const { statusLabel } = require("../utils/order");
 const { notifyOrderStatus } = require("./order");
+const { getOrCreateWallet } = require("./wallet");
 
 module.exports.showAdminPanel = async function showAdminPanel(user, chatId) {
   await reply(user, chatId, "⚙️ پنل ادمین", adminMenu());
@@ -76,6 +78,11 @@ module.exports.handleAdmin = async function handleAdmin(user, chatId, text) {
 
   if (text === BTN.ADMIN_SHIPPED) {
     await showOrdersInline(user, chatId, { status: "SHIPPED" }, "🚚 فاکتورهای ارسال شده", "shipd_more");
+    return true;
+  }
+
+  if (text === BTN.ADMIN_WITHDRAWALS) {
+    await showPendingWithdrawals(user, chatId);
     return true;
   }
 
@@ -198,6 +205,12 @@ module.exports.handleAdmin = async function handleAdmin(user, chatId, text) {
 
   if (order && user.role === "ADMIN") {
     await showAdminOrderDetail(user, chatId, order);
+    return true;
+  }
+
+  if (user.adminStep?.startsWith("CONFIRM_WITHDRAWAL:")) {
+    const withdrawalId = user.adminStep.split(":").slice(1).join(":");
+    await confirmWithdrawal(user, chatId, withdrawalId, text);
     return true;
   }
 
@@ -365,10 +378,29 @@ async function approveOrder(user, chatId) {
   });
 
   if (owner) {
-    await notify(
-      owner.baleId,
-      buildInvoiceText(order, order.items)
-    );
+    await notify(owner.baleId, buildInvoiceText(order, order.items));
+
+    if (owner.referrerId) {
+      const commission = Math.floor(order.totalAmount * 0.05);
+      if (commission > 0) {
+        await getOrCreateWallet(owner.referrerId);
+        await prisma.wallet.update({
+          where: { userId: owner.referrerId },
+          data: { balance: { increment: commission } },
+        });
+
+        const referrer = await prisma.user.findUnique({
+          where: { id: owner.referrerId },
+        });
+
+        if (referrer) {
+          await notify(
+            referrer.baleId,
+            `🎉 پورسانت دریافت کردید!\n\n💰 مبلغ: ${commission.toLocaleString("fa-IR")} تومان\n\nاین پورسانت بابت خرید تایید‌شده یکی از معرفی‌شده‌های شما است.\nبرای مشاهده موجودی کیف پول از منوی اصلی وارد شوید.`
+          );
+        }
+      }
+    }
   }
 
   await reply(user, chatId, "✅ فاکتور تایید شد.", adminApprovedActions());
@@ -393,6 +425,103 @@ module.exports.showRejectedOrders = async function showRejectedOrders(user, chat
 module.exports.showShippedOrders = async function showShippedOrders(user, chatId, offset) {
   await showOrdersInline(user, chatId, { status: "SHIPPED" }, "🚚 فاکتورهای ارسال شده", "shipd_more", offset);
 };
+
+async function showPendingWithdrawals(user, chatId) {
+  const withdrawals = await prisma.withdrawal.findMany({
+    where: { status: "PENDING" },
+    orderBy: { createdAt: "asc" },
+    include: { wallet: { include: { user: true } } },
+  });
+
+  if (!withdrawals.length) {
+    await reply(user, chatId, "💸 درخواست‌های پورسانت\n\nدرخواست برداشت در انتظاری وجود ندارد.", adminMenu());
+    return;
+  }
+
+  const rows = withdrawals.map((w) => [{
+    text: `👤 ${w.wallet.user.fullName || w.wallet.user.baleId} | 💰 ${w.amount.toLocaleString("fa-IR")} تومان`,
+    callback_data: `wdr:${w.id}`,
+  }]);
+
+  await reply(user, chatId, `💸 درخواست‌های پورسانت (${withdrawals.length} مورد)\n\nروی هر درخواست کلیک کنید:`, inlineKb(rows));
+}
+
+module.exports.showWithdrawalDetail = async function showWithdrawalDetail(user, chatId, withdrawalId) {
+  const w = await prisma.withdrawal.findUnique({
+    where: { id: withdrawalId },
+    include: { wallet: { include: { user: true } } },
+  });
+
+  if (!w) {
+    await reply(user, chatId, "درخواست پیدا نشد.", adminMenu());
+    return;
+  }
+
+  const date = new Date(w.createdAt).toLocaleDateString("fa-IR");
+  const status = w.status === "PAID" ? "✅ پرداخت شده" : "⏳ در انتظار";
+
+  const detail = [
+    "💸 جزئیات درخواست برداشت",
+    "━━━━━━━━━━━━━━━━━━",
+    `👤 کاربر: ${w.wallet.user.fullName || w.wallet.user.baleId}`,
+    `💰 مبلغ: ${w.amount.toLocaleString("fa-IR")} تومان`,
+    `💳 شماره کارت: ${w.cardNumber}`,
+    `👤 نام صاحب کارت: ${w.cardHolder}`,
+    `📅 تاریخ: ${date}`,
+    `📊 وضعیت: ${status}`,
+  ].join("\n");
+
+  if (w.status === "PAID") {
+    await reply(user, chatId, `${detail}\n🔖 کد رهگیری: ${w.trackingCode}`, adminMenu());
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { adminStep: `CONFIRM_WITHDRAWAL:${w.id}` },
+  });
+
+  await reply(
+    user,
+    chatId,
+    `${detail}\n\nپس از واریز مبلغ، کد رهگیری تراکنش را وارد کنید:`,
+    backMain()
+  );
+};
+
+async function confirmWithdrawal(user, chatId, withdrawalId, trackingCode) {
+  const w = await prisma.withdrawal.findUnique({
+    where: { id: withdrawalId },
+    include: { wallet: { include: { user: true } } },
+  });
+
+  if (!w || w.status === "PAID") {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { adminStep: null },
+    });
+    await reply(user, chatId, "این درخواست قبلاً تایید شده یا پیدا نشد.", adminMenu());
+    return;
+  }
+
+  await prisma.withdrawal.update({
+    where: { id: withdrawalId },
+    data: { status: "PAID", trackingCode: trackingCode.trim() },
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { adminStep: null },
+  });
+
+  const recipient = w.wallet.user;
+  await notify(
+    recipient.baleId,
+    `🎉 تبریک! پورسانت شما واریز شد.\n\n💰 مبلغ: ${w.amount.toLocaleString("fa-IR")} تومان\n💳 شماره کارت: ${w.cardNumber}\n🔖 کد رهگیری: ${trackingCode.trim()}\n\nمبلغ با موفقیت به حساب شما واریز گردید.`
+  );
+
+  await reply(user, chatId, `✅ تایید شد. کد رهگیری برای کاربر ارسال گردید.`, adminMenu());
+}
 
 module.exports.handleAdminPhoto = async function handleAdminPhoto(
   user,
