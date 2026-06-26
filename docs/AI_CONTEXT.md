@@ -1,4 +1,4 @@
-# AI_CONTEXT.md — PetLand v20
+# AI_CONTEXT.md — PetLand v21
 > خلاصه مدیریتی پروژه برای استفاده در چت‌های AI. این فایل را در ابتدای هر مکالمه بارگذاری کن.
 
 ---
@@ -16,13 +16,13 @@
 | HTTP | Express 5 (فقط health check) |
 | Database | PostgreSQL + Prisma 6 ORM |
 | Messaging | Bale Bot API (long polling) |
-| PDF | PDFKit |
+| PDF | PDFKit (فارسی ناقص) |
 | Deploy | Liara (PaaS ایرانی) |
-| UI | Bale inline keyboards — کاملاً فارسی |
+| UI | Bale inline + reply keyboards — کاملاً فارسی |
 
 ---
 
-## ساختار کد (26 فایل)
+## ساختار کد (30 فایل)
 
 ```
 src/
@@ -43,33 +43,38 @@ src/
     colleague.js    ← wholesale mode
     support.js      ← tickets
     help.js         ← help text
+    marketing.js    ← referral system & marketing info
+    wallet.js       ← wallet, withdrawal request & history
   keyboards/menus.js← Persian keyboard buttons
   utils/
     price.js        ← retail vs wholesale pricing
     order.js        ← tracking code generation
-    invoice.js      ← PDF invoice
+    invoice.js      ← PDF invoice + text invoice builder
   data/products.js  ← static catalog (~130+ products, 14 categories)
   seed.js           ← DB seeder
 prisma/schema.prisma← DB schema
+setup-assets.js     ← one-time script for font/logo setup
 ```
 
 ---
 
-## Database (8 مدل)
+## Database (10 مدل)
 
 | مدل | نقش کلیدی |
 |-----|----------|
-| `User` | کاربر + state machine مکالمه (`orderStep`, `adminStep`, فیلدهای temp) |
+| `User` | کاربر + state machine + `referrerId` (معرف) |
 | `Category` | دسته‌بندی محصولات |
 | `Product` | کد یکتا، `costPrice`, `profitPercent`, Bale `file_id` برای عکس |
 | `Cart` / `CartItem` | سبد خرید یک‌به‌یک با User |
 | `Order` / `OrderItem` | سفارش با چرخه وضعیت کامل |
 | `Ticket` / `TicketMessage` | تیکت پشتیبانی |
+| `Wallet` | کیف پول کاربر (موجودی پورسانت) |
+| `Withdrawal` | درخواست برداشت از کیف پول |
 
 **چرخه وضعیت سفارش:**
 ```
 WAITING_PAYMENT → WAITING_APPROVAL → APPROVED → PACKAGING → SHIPPED → DELIVERED
-                                             ↘ REJECTED
+                                           ↘ REJECTED
 ```
 
 ---
@@ -89,9 +94,12 @@ WAITING_PAYMENT → WAITING_APPROVAL → APPROVED → PACKAGING → SHIPPED → 
 - **قیمت خرده** = `costPrice × (1 + profitPercent/100)` (پیش‌فرض 15%)
 - **قیمت عمده** = `costPrice` (بدون سود، برای COLLEAGUE)
 - **حداقل سفارش عمده** = 50,000,000 تومان (قابل تنظیم)
-- **پرداخت** = دستی، کارت به کارت، آپلود رسید در ربات
+- **پرداخت** = دستی، کارت به کارت یا شبا، آپلود رسید در ربات
 - **کد رهگیری** = فرمت `PL-YYYYMMDD-####`
-- **فاکتور** = PDF تولیدشده با PDFKit، ارسال به ادمین و مشتری
+- **فاکتور PDF** = با PDFKit — ارسال به ادمین هنگام تایید
+- **بازاریابی** = لینک معرفی `/start ref_<baleId>` — معرف برای همیشه ثبت می‌شود
+- **پورسانت** = 5٪ مبلغ فاکتور تایید‌شده به کیف پول معرف واریز می‌شود
+- **برداشت** = حداقل 50,000 تومان، حداکثر 10,000,000 تومان — ادمین تایید می‌کند
 
 ---
 
@@ -105,7 +113,12 @@ ADMIN_BALE_IDS         # شناسه‌های Bale ادمین، با کاما
 COLLEAGUE_ACCESS_CODE  # کد دسترسی عمده (پیش‌فرض: petland1404)
 DEFAULT_PROFIT_PERCENT # پیش‌فرض: 15
 WHOLESALE_MIN_ORDER    # پیش‌فرض: 50000000
-BANK_CARD / BANK_HOLDER / BANK_NAME  # اطلاعات پرداخت
+BANK_CARD              # شماره کارت
+BANK_IBAN              # شماره شبا (اختیاری)
+BANK_HOLDER            # نام صاحب حساب
+BANK_NAME              # نام بانک
+BOT_USERNAME           # یوزرنیم ربات بدون @ (برای لینک معرفی)
+SHOP_NAME              # پیش‌فرض: پت لند
 ```
 
 ---
@@ -117,6 +130,7 @@ npm run build    # prisma generate (با mirror ایران)
 npm run db:push  # sync schema
 npm run seed     # بارگذاری محصولات
 npm start        # اجرا (پروسه دائمی)
+node setup-assets.js  # کپی لوگو و فونت (یک بار)
 ```
 
 ---
@@ -127,10 +141,10 @@ npm start        # اجرا (پروسه دائمی)
 |------|-------|
 | بدون `.gitignore` | خطر push کردن `.env` |
 | بدون Migration files | rollback DB ممکن نیست |
+| فاکتور PDF فارسی ناقص | PDFKit متن فارسی را درست render نمی‌کند |
 | `webhook.js` stub و بلااستفاده | |
 | `axios` نصب ولی استفاده نشده | |
 | بدون تست | |
-| بدون README | |
 | بدون rate limiting | |
 
 ---

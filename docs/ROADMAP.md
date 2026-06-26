@@ -9,7 +9,12 @@
 
 ### 1. افزودن `.gitignore`
 - **چرا:** فایل `.env` (حاوی `BOT_TOKEN` و `DATABASE_URL`) ممکن است به مخزن push شود
-- **کار:** ایجاد `.gitignore` با `node_modules/`, `.env`, `tmp/`
+- **کار:** ایجاد `.gitignore` با `node_modules/`, `.env`, `tmp/`, `src/assets/`
+
+### 1.5. فاکتور PDF فارسی واقعی
+- **چرا:** PDFKit متن فارسی را به درستی render نمی‌کند (حروف متصل نمی‌شوند)
+- **کار:** جایگزینی با `pdfmake` (پشتیبانی RTL) — نیاز به `npm install pdfmake` و اجرای local + commit کردن `package-lock.json` جدید
+- **یادداشت:** تلاش قبلی به دلیل timeout در Liara (npm install بدون lock file) شکست خورد
 
 ### 2. Prisma Migration Files
 - **چرا:** الان فقط `db:push` استفاده می‌شود — rollback یا تاریخچه تغییرات DB وجود ندارد
