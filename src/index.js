@@ -1,6 +1,6 @@
 const express = require("express");
 const { PORT } = require("./config");
-const { testBot, getUpdates } = require("./bot/bale");
+const { testBot, getUpdates, answerCallbackQuery } = require("./bot/bale");
 const { getOrCreateUser } = require("./services/user");
 const messageHandler = require("./handlers/router");
 
@@ -18,6 +18,14 @@ app.get("/health", (req, res) => {
 let offset = 0;
 
 async function processUpdate(update) {
+  if (update.callback_query) {
+    const cq = update.callback_query;
+    const user = await getOrCreateUser({ from: cq.from });
+    await messageHandler.handleCallbackQuery(cq, user);
+    await answerCallbackQuery(cq.id);
+    return;
+  }
+
   if (!update.message) return;
 
   const msg = update.message;

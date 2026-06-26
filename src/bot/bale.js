@@ -119,6 +119,13 @@ async function getFile(fileId) {
   return apiCall("getFile", { file_id: fileId });
 }
 
+async function answerCallbackQuery(callbackQueryId, text = "") {
+  return apiCall("answerCallbackQuery", {
+    callback_query_id: callbackQueryId,
+    text,
+  });
+}
+
 module.exports = {
   testBot,
   getUpdates,
@@ -128,5 +135,6 @@ module.exports = {
   sendPhoto,
   sendDocument,
   getFile,
+  answerCallbackQuery,
   API_URL,
 };

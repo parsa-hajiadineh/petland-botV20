@@ -167,6 +167,20 @@ module.exports = async function messageHandler(message, user) {
   );
 };
 
+module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user) {
+  const data = (cq.data || "").trim();
+  const chatId = cq.message.chat.id;
+
+  user = await reloadUser(user.id);
+
+  if (data.startsWith("PL-")) {
+    const shown = await orderHandler.showOrderByTracking(user, chatId, data);
+    if (!shown) {
+      await reply(user, chatId, "❌ سفارشی با این کد پیگیری یافت نشد.");
+    }
+  }
+};
+
 module.exports.handlePhoto = async function handlePhoto(message, user) {
   const chatId = message.chat.id;
   user = await reloadUser(user.id);

@@ -37,6 +37,10 @@ function kb(rows) {
   };
 }
 
+function inlineKb(rows) {
+  return { inline_keyboard: rows };
+}
+
 function mainMenu(user) {
   const rows = [
     [{ text: BTN.PRODUCTS }],
@@ -143,6 +147,7 @@ function activeTicketMenu() {
 
 module.exports = {
   BTN,
+  inlineKb,
   mainMenu,
   backMain,
   productDetailMenu,

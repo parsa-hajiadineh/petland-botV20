@@ -1,7 +1,7 @@
 const prisma = require("../database/prisma");
 const { ADMIN_BALE_IDS } = require("../config");
 const { reply, notify } = require("../bot/messenger");
-const { BTN, checkoutSkipMenu, paymentMenu, mainMenu, backMain } = require("../keyboards/menus");
+const { BTN, checkoutSkipMenu, paymentMenu, mainMenu, backMain, inlineKb } = require("../keyboards/menus");
 const { validateCheckout } = require("./cart");
 const { getUnitPrice } = require("../utils/price");
 const {
@@ -260,31 +260,21 @@ module.exports.showMyOrders = async function showMyOrders(user, chatId) {
   });
 
   if (!orders.length) {
-    await reply(user, chatId, "📦 هنوز سفارشی ثبت نکرده‌اید.");
+    await reply(user, chatId, "📦 هنوز سفارشی ثبت نکرده‌اید.", backMain());
     return;
   }
 
-  let text = "📦 سفارشات من\n\n";
+  const rows = orders.map((order) => {
+    const label = `🔖 ${order.trackingCode} | ${statusLabel(order.status)} | ${order.totalAmount.toLocaleString("fa-IR")} تومان`;
+    return [{ text: label, callback_data: order.trackingCode }];
+  });
 
-  for (const order of orders) {
-    text += `🔖 ${order.trackingCode}\n`;
-    text += `📊 ${statusLabel(order.status)}\n`;
-    text += `💰 ${order.totalAmount.toLocaleString("fa-IR")} تومان\n`;
-
-    if (order.shipmentInfo) {
-      text += `🚚 ${order.shipmentInfo}\n`;
-    }
-
-    if (order.status === "REJECTED" && order.rejectReason) {
-      text += `❌ دلیل رد: ${order.rejectReason}\n`;
-    }
-
-    text += "\n";
-  }
-
-  text += "برای جزئیات، کد پیگیری را ارسال کنید.";
-
-  await reply(user, chatId, text, mainMenu(user));
+  await reply(
+    user,
+    chatId,
+    "📦 سفارشات من\n\nبرای دیدن جزئیات هر سفارش روی آن کلیک کنید:",
+    inlineKb(rows)
+  );
 };
 
 module.exports.showOrderByTracking = async function showOrderByTracking(
