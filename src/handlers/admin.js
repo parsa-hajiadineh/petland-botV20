@@ -361,24 +361,25 @@ async function approveOrder(user, chatId) {
 
   await notifyOrderStatus(order, "✅ فاکتور تایید شد. در حال آماده‌سازی.");
 
-  try {
-    const pdfPath = await generateInvoicePdf(order, order.items);
-    await bale.sendDocument(
-      chatId,
-      fs.createReadStream(pdfPath),
-      `فاکتور ${order.trackingCode}`
-    );
-    fs.unlinkSync(pdfPath);
-  } catch (err) {
-    console.log("PDF ERROR:", err.message);
-  }
-
   const owner = await prisma.user.findUnique({
     where: { id: order.userId },
   });
 
   if (owner) {
     await notify(owner.baleId, buildInvoiceText(order, order.items));
+
+    // ارسال فاکتور PDF به کاربر
+    try {
+      const pdfPath = await generateInvoicePdf(order, order.items);
+      await bale.sendDocument(
+        owner.baleId,
+        fs.createReadStream(pdfPath),
+        `🧾 فاکتور رسمی ${order.trackingCode}`
+      );
+      fs.unlinkSync(pdfPath);
+    } catch (err) {
+      console.log("PDF SEND ERROR:", err.message);
+    }
 
     if (owner.referrerId) {
       const commission = Math.floor(order.totalAmount * 0.05);
