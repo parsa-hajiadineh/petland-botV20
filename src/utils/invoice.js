@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const PDFDocument = require("pdfkit");
 const { formatPrice } = require("./price");
 const { statusLabel } = require("./order");
 const { SHOP_NAME, BANK_CARD, BANK_IBAN, BANK_HOLDER, BANK_NAME } = require("../config");
@@ -95,151 +94,178 @@ function findLogoPath() {
 
 async function generateInvoicePdf(order, items) {
   const os = require("os");
+  const PdfPrinter = require("pdfmake");
+
   const dir = path.join(os.tmpdir(), "petland-invoices");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
   const filePath = path.join(dir, `${order.trackingCode}.pdf`);
+
   const hasFont = fs.existsSync(FONT_PATH);
-  const logoPath = findLogoPath();
-  const hasLogo = !!logoPath;
+  const logoFilePath = findLogoPath();
+
+  // ─── فونت ────────────────────────────────────────────────────────────────
+  const fontName = hasFont ? "Vazir" : "Roboto";
+  const fontDefs = {};
+
+  if (hasFont) {
+    fontDefs["Vazir"] = {
+      normal: FONT_PATH,
+      bold: FONT_PATH,
+      italics: FONT_PATH,
+      bolditalics: FONT_PATH,
+    };
+  } else {
+    // فونت پیش‌فرض pdfmake به عنوان fallback
+    const robotoBase = path.join(
+      path.dirname(require.resolve("pdfmake/package.json")),
+      "build", "vfs_fonts.js"
+    );
+    console.warn("INVOICE: Font not found, using fallback (Persian may not render correctly).");
+    // پریسه پیش‌فرض بدون فونت فارسی — حداقل PDF ساخته می‌شه
+    fontDefs["Roboto"] = {
+      normal: Buffer.from(""),
+      bold: Buffer.from(""),
+      italics: Buffer.from(""),
+      bolditalics: Buffer.from(""),
+    };
+  }
+
+  const printer = new PdfPrinter(fontDefs);
+
+  // ─── لوگو به base64 ───────────────────────────────────────────────────────
+  let logoDataUrl = null;
+  if (logoFilePath) {
+    try {
+      const buf = fs.readFileSync(logoFilePath);
+      const ext = path.extname(logoFilePath).slice(1).toLowerCase();
+      const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : "image/png";
+      logoDataUrl = `data:${mime};base64,${buf.toString("base64")}`;
+    } catch (_) {}
+  }
+
+  const createdDate = new Date(order.createdAt || Date.now()).toLocaleDateString("fa-IR");
+
+  // ─── جدول اقلام ───────────────────────────────────────────────────────────
+  const tableBody = [
+    [
+      { text: "محصول", style: "tableHeader", alignment: "right" },
+      { text: "کد", style: "tableHeader", alignment: "center" },
+      { text: "تعداد", style: "tableHeader", alignment: "center" },
+      { text: "قیمت واحد", style: "tableHeader", alignment: "right" },
+      { text: "جمع", style: "tableHeader", alignment: "right" },
+    ],
+    ...items.map((item) => [
+      { text: item.product.title, alignment: "right" },
+      { text: item.product.code, alignment: "center", fontSize: 8 },
+      { text: String(item.quantity), alignment: "center" },
+      { text: formatPrice(item.unitPrice), alignment: "right" },
+      { text: formatPrice(item.unitPrice * item.quantity), alignment: "right" },
+    ]),
+  ];
+
+  // ─── سربرگ ───────────────────────────────────────────────────────────────
+  const headerContent = [];
+  if (logoDataUrl) {
+    headerContent.push({ image: logoDataUrl, width: 65, alignment: "center", margin: [0, 0, 0, 6] });
+  }
+  headerContent.push({ text: SHOP_NAME, style: "shopName" });
+  headerContent.push({ text: "PETLAND PET SHOP", style: "shopSub" });
+  headerContent.push({ text: "@petland_bot  |  @petlandshop_bot", style: "shopContact" });
+  headerContent.push({ canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: "#cccccc" }], margin: [0, 8, 0, 10] });
+
+  const docDef = {
+    pageSize: "A4",
+    pageMargins: [40, 40, 40, 60],
+
+    defaultStyle: {
+      font: fontName,
+      direction: "rtl",
+      alignment: "right",
+      fontSize: 10,
+      lineHeight: 1.5,
+      color: "#1a1a1a",
+    },
+
+    content: [
+      ...headerContent,
+
+      { text: "فاکتور رسمی", style: "invoiceTitle" },
+      { text: `کد پیگیری: ${order.trackingCode}`, alignment: "center", fontSize: 9, color: "#555555", margin: [0, 2, 0, 10] },
+      { canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: "#cccccc" }], margin: [0, 0, 0, 10] },
+
+      { text: "اطلاعات گیرنده", style: "sectionTitle" },
+      {
+        columns: [
+          { text: `نام: ${order.fullName}`, width: "*" },
+          { text: `موبایل: ${order.phone}`, width: "*" },
+        ],
+        columnGap: 10,
+        margin: [0, 0, 0, 4],
+      },
+      { text: `استان: ${order.province}   |   شهر: ${order.city}`, margin: [0, 0, 0, 4] },
+      { text: `آدرس: ${order.address}`, margin: [0, 0, 0, 4] },
+      order.postalCode ? { text: `کد پستی: ${order.postalCode}`, margin: [0, 0, 0, 4] } : null,
+      order.description ? { text: `توضیحات: ${order.description}`, margin: [0, 0, 0, 4] } : null,
+      { canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: "#cccccc" }], margin: [0, 8, 0, 10] },
+
+      { text: "اقلام سفارش", style: "sectionTitle" },
+      {
+        table: {
+          headerRows: 1,
+          widths: ["*", 60, 45, 90, 90],
+          body: tableBody,
+        },
+        layout: {
+          fillColor: (rowIndex) => rowIndex === 0 ? "#2c2c2c" : rowIndex % 2 === 0 ? "#f5f5f5" : "#ffffff",
+          hLineColor: () => "#e0e0e0",
+          vLineColor: () => "#e0e0e0",
+          hLineWidth: () => 0.5,
+          vLineWidth: () => 0.5,
+          paddingTop: () => 6,
+          paddingBottom: () => 6,
+          paddingLeft: () => 8,
+          paddingRight: () => 8,
+        },
+        margin: [0, 0, 0, 12],
+      },
+
+      { canvas: [{ type: "line", x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1.5, lineColor: "#2c2c2c" }], margin: [0, 0, 0, 6] },
+      { text: `جمع کل: ${formatPrice(order.totalAmount)}`, style: "total" },
+      { text: order.isWholesale ? "نوع سفارش: خرید همکار" : "نوع سفارش: خرید عادی", fontSize: 9, color: "#666666", margin: [0, 4, 0, 0] },
+      { text: `تاریخ ثبت: ${createdDate}`, fontSize: 9, color: "#666666", margin: [0, 4, 0, 0] },
+    ].filter(Boolean),
+
+    styles: {
+      shopName: { fontSize: 20, bold: true, color: "#1a1a1a", alignment: "center", margin: [0, 0, 0, 4] },
+      shopSub: { fontSize: 10, color: "#555555", alignment: "center", margin: [0, 0, 0, 2] },
+      shopContact: { fontSize: 8, color: "#888888", alignment: "center", margin: [0, 0, 0, 4] },
+      invoiceTitle: { fontSize: 15, bold: true, color: "#1a1a1a", alignment: "center", margin: [0, 0, 0, 4] },
+      sectionTitle: { fontSize: 11, bold: true, color: "#1a1a1a", margin: [0, 0, 0, 6] },
+      tableHeader: { bold: true, color: "#ffffff", fontSize: 9 },
+      total: { fontSize: 14, bold: true, color: "#1a1a1a", alignment: "right" },
+    },
+
+    footer: (currentPage, pageCount) => ({
+      text: "این فاکتور به صورت خودکار توسط سیستم پت لند صادر شده است.",
+      alignment: "center",
+      fontSize: 7,
+      color: "#aaaaaa",
+      margin: [40, 10, 40, 0],
+      font: fontName,
+    }),
+  };
 
   await new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      size: "A4",
-      margin: 40,
-      info: {
-        Title: `فاکتور ${order.trackingCode}`,
-        Author: SHOP_NAME,
-      },
-    });
-
-    const stream = fs.createWriteStream(filePath);
-    doc.pipe(stream);
-
-    if (hasFont) {
-      doc.registerFont("Vazir", FONT_PATH);
+    try {
+      const pdfDoc = printer.createPdfKitDocument(docDef);
+      const writeStream = fs.createWriteStream(filePath);
+      pdfDoc.pipe(writeStream);
+      pdfDoc.end();
+      writeStream.on("finish", resolve);
+      writeStream.on("error", reject);
+    } catch (err) {
+      reject(err);
     }
-
-    const W = doc.page.width - 80; // عرض محتوا
-    const RTL = { align: "right", features: ["rtla"] };
-    const CENTER = { align: "center" };
-
-    const farsi = (size, text, opts = RTL) => {
-      if (hasFont) doc.font("Vazir");
-      return doc.fontSize(size).text(text, 40, doc.y, { width: W, ...opts });
-    };
-
-    const line = (y) =>
-      doc.moveTo(40, y).lineTo(doc.page.width - 40, y).strokeColor("#cccccc").lineWidth(0.5).stroke();
-
-    // ─── سربرگ ─────────────────────────────────────────────────────────────
-    const headerTop = 40;
-
-    if (hasLogo) {
-      try {
-        doc.image(logoPath, 40, headerTop, { width: 70, height: 70 });
-      } catch (_) {}
-    }
-
-    if (hasFont) doc.font("Vazir");
-    doc.fontSize(20).fillColor("#1a1a1a")
-       .text(SHOP_NAME, 0, headerTop + 10, { align: "center", width: doc.page.width });
-
-    doc.fontSize(10).fillColor("#555555")
-       .text("PETLAND PET SHOP", 0, headerTop + 36, { align: "center", width: doc.page.width });
-
-    doc.fontSize(9).fillColor("#777777")
-       .text("@petland_bot  |  @petlandshop_bot", 0, headerTop + 52, { align: "center", width: doc.page.width });
-
-    doc.y = headerTop + 80;
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── عنوان فاکتور ───────────────────────────────────────────────────────
-    doc.fillColor("#1a1a1a");
-    farsi(14, `🧾 فاکتور رسمی`, CENTER);
-    doc.moveDown(0.2);
-    farsi(10, `کد پیگیری: ${order.trackingCode}`, CENTER);
-    doc.moveDown(0.5);
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── اطلاعات مشتری ──────────────────────────────────────────────────────
-    farsi(11, "اطلاعات گیرنده");
-    doc.moveDown(0.2);
-    farsi(10, `نام: ${order.fullName}`);
-    farsi(10, `موبایل: ${order.phone}`);
-    farsi(10, `استان: ${order.province}   شهر: ${order.city}`);
-    farsi(10, `آدرس: ${order.address}`);
-    if (order.postalCode) farsi(10, `کد پستی: ${order.postalCode}`);
-    if (order.description) farsi(10, `توضیحات: ${order.description}`);
-    doc.moveDown(0.5);
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── جدول اقلام ────────────────────────────────────────────────────────
-    farsi(11, "اقلام سفارش");
-    doc.moveDown(0.3);
-
-    // هدر جدول
-    const col = { title: 40, code: 250, qty: 330, unit: 390, total: 460 };
-    if (hasFont) doc.font("Vazir");
-    doc.fontSize(9).fillColor("#ffffff");
-    doc.rect(40, doc.y, W, 18).fill("#333333");
-    const rowY = doc.y + 4;
-    doc.fillColor("#ffffff");
-    doc.text("محصول", col.title, rowY, { width: 200 });
-    doc.text("کد", col.code, rowY, { width: 70 });
-    doc.text("تعداد", col.qty, rowY, { width: 50 });
-    doc.text("قیمت واحد", col.unit, rowY, { width: 80 });
-    doc.text("جمع", col.total, rowY, { width: 80 });
-    doc.y += 22;
-
-    // ردیف‌های جدول
-    let rowNum = 0;
-    for (const item of items) {
-      const rowBg = rowNum % 2 === 0 ? "#f9f9f9" : "#ffffff";
-      doc.rect(40, doc.y, W, 18).fill(rowBg);
-      doc.fillColor("#1a1a1a").fontSize(8);
-      if (hasFont) doc.font("Vazir");
-      const ry = doc.y + 4;
-      const title = item.product.title.length > 28
-        ? item.product.title.substring(0, 28) + "..."
-        : item.product.title;
-      doc.text(title, col.title, ry, { width: 200 });
-      doc.text(item.product.code, col.code, ry, { width: 70 });
-      doc.text(String(item.quantity), col.qty, ry, { width: 50 });
-      doc.text(formatPrice(item.unitPrice), col.unit, ry, { width: 80 });
-      doc.text(formatPrice(item.unitPrice * item.quantity), col.total, ry, { width: 80 });
-      doc.y += 20;
-      rowNum++;
-    }
-
-    doc.moveDown(0.5);
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── جمع کل ──────────────────────────────────────────────────────────────
-    doc.fillColor("#1a1a1a");
-    farsi(13, `جمع کل: ${formatPrice(order.totalAmount)}`);
-    farsi(9, order.isWholesale ? "نوع سفارش: خرید همکار" : "نوع سفارش: خرید عادی");
-
-    doc.moveDown(0.5);
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── تاریخ ───────────────────────────────────────────────────────────────
-    const createdDate = new Date(order.createdAt || Date.now()).toLocaleDateString("fa-IR");
-    farsi(9, `تاریخ ثبت سفارش: ${createdDate}`);
-
-    // ─── فوتر ─────────────────────────────────────────────────────────────────
-    doc.fontSize(8).fillColor("#aaaaaa")
-       .text("این فاکتور به صورت خودکار توسط سیستم صادر شده است.", 40,
-         doc.page.height - 50, { align: "center", width: W });
-
-    doc.end();
-    stream.on("finish", resolve);
-    stream.on("error", reject);
   });
 
   return filePath;
