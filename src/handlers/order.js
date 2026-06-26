@@ -243,9 +243,7 @@ module.exports.handleReceiptPhoto = async function handleReceiptPhoto(
 ${summary}
 
 👤 ${order.fullName} | 📱 ${order.phone}
-🔖 ${order.trackingCode}
-
-برای بررسی: پنل ادمین → فاکتورهای در انتظار`
+🔖 ${order.trackingCode}`
   );
 
   return true;
