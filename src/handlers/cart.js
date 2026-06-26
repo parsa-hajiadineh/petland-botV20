@@ -1,6 +1,6 @@
 const prisma = require("../database/prisma");
 const { reply } = require("../bot/messenger");
-const { BTN, cartMenu } = require("../keyboards/menus");
+const { BTN, cartMenu, backMain } = require("../keyboards/menus");
 const {
   getUnitPrice,
   formatPrice,
@@ -36,7 +36,7 @@ module.exports.showCart = async function showCart(user, chatId) {
   const data = await getCartWithItems(user.id);
 
   if (!data?.cart?.items?.length) {
-    await reply(user, chatId, "🛒 سبد خرید شما خالی است.");
+    await reply(user, chatId, "🛒 سبد خرید شما خالی است.", backMain());
     return;
   }
 
