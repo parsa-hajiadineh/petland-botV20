@@ -324,17 +324,11 @@ async function showAdminOrderDetail(user, chatId, order) {
   if (order.status === "WAITING_APPROVAL") {
     keyboard = adminOrderActions();
 
-    await reply(user, chatId, invoice, keyboard);
-
     if (order.receiptImage) {
-      await replyPhoto(
-        user,
-        chatId,
-        order.receiptImage,
-        "📸 رسید پرداخت"
-      );
+      await bale.sendPhoto(chatId, order.receiptImage, "📸 رسید پرداخت");
     }
 
+    await reply(user, chatId, invoice, keyboard);
     return;
   }
 

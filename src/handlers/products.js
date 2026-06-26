@@ -64,6 +64,8 @@ module.exports.showCategory = async function showCategory(
     return [{ text: label, callback_data: `product:${product.code}` }];
   });
 
+  rows.push([{ text: "🔙 بازگشت به دسته‌بندی‌ها", callback_data: "cat:back" }]);
+
   await reply(
     user,
     chatId,

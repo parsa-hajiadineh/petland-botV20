@@ -181,6 +181,11 @@ module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user
     return;
   }
 
+  if (data === "cat:back") {
+    await productsHandler(user, chatId);
+    return;
+  }
+
   if (data.startsWith("product:")) {
     const code = data.replace("product:", "");
     const product = await prisma.product.findUnique({
