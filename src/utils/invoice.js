@@ -82,156 +82,37 @@ function buildShippingInfo() {
   ].join("\n");
 }
 
-const FONT_PATH = path.join(__dirname, "..", "assets", "fonts", "VazirMatn-Regular.ttf");
-const LOGO_PATH = path.join(__dirname, "..", "assets", "logo.png");
-
-function hasFontFile() {
-  return fs.existsSync(FONT_PATH);
-}
-
 async function generateInvoicePdf(order, items) {
   const dir = path.join(process.cwd(), "tmp");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
   const filePath = path.join(dir, `${order.trackingCode}.pdf`);
-  const hasFont = hasFontFile();
-  const hasLogo = fs.existsSync(LOGO_PATH);
 
   await new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      size: "A4",
-      margin: 40,
-      info: {
-        Title: `فاکتور ${order.trackingCode}`,
-        Author: SHOP_NAME,
-      },
-    });
-
+    const doc = new PDFDocument({ margin: 50 });
     const stream = fs.createWriteStream(filePath);
+
     doc.pipe(stream);
+    doc.fontSize(18).text(`${SHOP_NAME} - Invoice`, { align: "center" });
+    doc.moveDown();
+    doc.fontSize(12).text(`Tracking: ${order.trackingCode}`);
+    doc.text(`Customer: ${order.fullName}`);
+    doc.text(`Phone: ${order.phone}`);
+    doc.text(`Address: ${order.province}, ${order.city}, ${order.address}`);
+    doc.moveDown();
 
-    if (hasFont) {
-      doc.registerFont("Vazir", FONT_PATH);
-    }
-
-    const W = doc.page.width - 80; // عرض محتوا
-    const RTL = { align: "right", features: ["rtla"] };
-    const CENTER = { align: "center" };
-
-    const farsi = (size, text, opts = RTL) => {
-      if (hasFont) doc.font("Vazir");
-      return doc.fontSize(size).text(text, 40, doc.y, { width: W, ...opts });
-    };
-
-    const line = (y) =>
-      doc.moveTo(40, y).lineTo(doc.page.width - 40, y).strokeColor("#cccccc").lineWidth(0.5).stroke();
-
-    // ─── سربرگ ─────────────────────────────────────────────────────────────
-    const headerTop = 40;
-
-    if (hasLogo) {
-      try {
-        doc.image(LOGO_PATH, 40, headerTop, { width: 70, height: 70 });
-      } catch (_) {}
-    }
-
-    if (hasFont) doc.font("Vazir");
-    doc.fontSize(20).fillColor("#1a1a1a")
-       .text(SHOP_NAME, 0, headerTop + 10, { align: "center", width: doc.page.width });
-
-    doc.fontSize(10).fillColor("#555555")
-       .text("PETLAND PET SHOP", 0, headerTop + 36, { align: "center", width: doc.page.width });
-
-    doc.fontSize(9).fillColor("#777777")
-       .text("@petland_bot  |  @petlandshop_bot", 0, headerTop + 52, { align: "center", width: doc.page.width });
-
-    doc.y = headerTop + 80;
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── عنوان فاکتور ───────────────────────────────────────────────────────
-    doc.fillColor("#1a1a1a");
-    farsi(14, `🧾 فاکتور رسمی`, CENTER);
-    doc.moveDown(0.2);
-    farsi(10, `کد پیگیری: ${order.trackingCode}`, CENTER);
-    doc.moveDown(0.5);
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── اطلاعات مشتری ──────────────────────────────────────────────────────
-    farsi(11, "اطلاعات گیرنده");
-    doc.moveDown(0.2);
-    farsi(10, `نام: ${order.fullName}`);
-    farsi(10, `موبایل: ${order.phone}`);
-    farsi(10, `استان: ${order.province}   شهر: ${order.city}`);
-    farsi(10, `آدرس: ${order.address}`);
-    if (order.postalCode) farsi(10, `کد پستی: ${order.postalCode}`);
-    if (order.description) farsi(10, `توضیحات: ${order.description}`);
-    doc.moveDown(0.5);
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── جدول اقلام ────────────────────────────────────────────────────────
-    farsi(11, "اقلام سفارش");
-    doc.moveDown(0.3);
-
-    // هدر جدول
-    const col = { title: 40, code: 250, qty: 330, unit: 390, total: 460 };
-    if (hasFont) doc.font("Vazir");
-    doc.fontSize(9).fillColor("#ffffff");
-    doc.rect(40, doc.y, W, 18).fill("#333333");
-    const rowY = doc.y + 4;
-    doc.fillColor("#ffffff");
-    doc.text("محصول", col.title, rowY, { width: 200 });
-    doc.text("کد", col.code, rowY, { width: 70 });
-    doc.text("تعداد", col.qty, rowY, { width: 50 });
-    doc.text("قیمت واحد", col.unit, rowY, { width: 80 });
-    doc.text("جمع", col.total, rowY, { width: 80 });
-    doc.y += 22;
-
-    // ردیف‌های جدول
-    let rowNum = 0;
     for (const item of items) {
-      const rowBg = rowNum % 2 === 0 ? "#f9f9f9" : "#ffffff";
-      doc.rect(40, doc.y, W, 18).fill(rowBg);
-      doc.fillColor("#1a1a1a").fontSize(8);
-      if (hasFont) doc.font("Vazir");
-      const ry = doc.y + 4;
-      const title = item.product.title.length > 28
-        ? item.product.title.substring(0, 28) + "..."
-        : item.product.title;
-      doc.text(title, col.title, ry, { width: 200 });
-      doc.text(item.product.code, col.code, ry, { width: 70 });
-      doc.text(String(item.quantity), col.qty, ry, { width: 50 });
-      doc.text(formatPrice(item.unitPrice), col.unit, ry, { width: 80 });
-      doc.text(formatPrice(item.unitPrice * item.quantity), col.total, ry, { width: 80 });
-      doc.y += 20;
-      rowNum++;
+      doc.text(
+        `${item.product.title} x${item.quantity} = ${formatPrice(
+          item.unitPrice * item.quantity
+        )}`
+      );
     }
 
-    doc.moveDown(0.5);
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── جمع کل ──────────────────────────────────────────────────────────────
-    doc.fillColor("#1a1a1a");
-    farsi(13, `جمع کل: ${formatPrice(order.totalAmount)}`);
-    farsi(9, order.isWholesale ? "نوع سفارش: خرید همکار" : "نوع سفارش: خرید عادی");
-
-    doc.moveDown(0.5);
-    line(doc.y);
-    doc.moveDown(0.5);
-
-    // ─── تاریخ ───────────────────────────────────────────────────────────────
-    const createdDate = new Date(order.createdAt || Date.now()).toLocaleDateString("fa-IR");
-    farsi(9, `تاریخ ثبت سفارش: ${createdDate}`);
-
-    // ─── فوتر ─────────────────────────────────────────────────────────────────
-    doc.fontSize(8).fillColor("#aaaaaa")
-       .text("این فاکتور به صورت خودکار توسط سیستم صادر شده است.", 40,
-         doc.page.height - 50, { align: "center", width: W });
-
+    doc.moveDown();
+    doc.fontSize(14).text(`Total: ${formatPrice(order.totalAmount)}`);
     doc.end();
+
     stream.on("finish", resolve);
     stream.on("error", reject);
   });
