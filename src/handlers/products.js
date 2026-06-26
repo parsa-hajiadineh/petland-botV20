@@ -76,12 +76,20 @@ module.exports.showCategory = async function showCategory(
     ])
   );
 
-  // ارسال لیست محصولات به صورت inline (بدون track)
-  await bale.sendKeyboard(
+  // ارسال لیست محصولات به صورت inline و track کردن message_id برای حذف بعدی
+  const inlineResult = await bale.sendKeyboard(
     chatId,
     `${products.length} محصول — روی هر محصول برای جزئیات کلیک کنید:`,
     inlineKb(productRows)
   );
+
+  const inlineMsgId = inlineResult?.result?.message_id;
+  if (inlineMsgId) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastMessageId: inlineMsgId },
+    });
+  }
 };
 
 module.exports.showProduct = async function showProduct(
