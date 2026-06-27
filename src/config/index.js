@@ -11,6 +11,7 @@ module.exports = {
   PORT: process.env.PORT || 3000,
   ADMIN_BALE_IDS: parseIds(process.env.ADMIN_BALE_IDS),
   COLLEAGUE_ACCESS_CODE: process.env.COLLEAGUE_ACCESS_CODE || "petland1404",
+  MARKETING_ACCESS_CODE: process.env.MARKETING_ACCESS_CODE || "petland-vip",
   DEFAULT_PROFIT_PERCENT: Number(process.env.DEFAULT_PROFIT_PERCENT || 15),
   WHOLESALE_MIN_ORDER: Number(process.env.WHOLESALE_MIN_ORDER || 50000000),
   SHOP_NAME: process.env.SHOP_NAME || "پت لند",

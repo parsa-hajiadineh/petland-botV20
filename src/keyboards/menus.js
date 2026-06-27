@@ -57,8 +57,11 @@ function mainMenu(user) {
     [{ text: BTN.PRODUCTS }],
     [{ text: BTN.CART }, { text: BTN.ORDERS }],
     [{ text: BTN.SUPPORT }, { text: BTN.HELP }],
-    [{ text: BTN.MARKETING }, { text: BTN.WALLET }],
   ];
+
+  if (user.marketingEnabled) {
+    rows.push([{ text: BTN.MARKETING }, { text: BTN.WALLET }]);
+  }
 
   if (user.role === "COLLEAGUE") {
     rows.push([{ text: BTN.RETAIL_MODE }]);

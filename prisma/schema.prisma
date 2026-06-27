@@ -63,6 +63,7 @@ model User {
   tempAddressId   String?
 
   adminStep       String?
+  marketingEnabled Boolean @default(false)
 
   referrerId      String?
   referrer        User?    @relation("Referrals", fields: [referrerId], references: [id])

@@ -1,8 +1,9 @@
 const prisma = require("../database/prisma");
 const { reloadUser } = require("../services/user");
 const { isAdmin } = require("../services/user");
-const { BTN, backMain } = require("../keyboards/menus");
+const { BTN, backMain, mainMenu } = require("../keyboards/menus");
 const { reply } = require("../bot/messenger");
+const { MARKETING_ACCESS_CODE } = require("../config");
 
 const productsHandler = require("./products");
 const cartHandler = require("./cart");
@@ -193,6 +194,21 @@ module.exports = async function messageHandler(message, user) {
 
   if (product) {
     await productsHandler.showProduct(user, chatId, product);
+    return;
+  }
+
+  if (text.trim() === MARKETING_ACCESS_CODE) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { marketingEnabled: true },
+    });
+    user = await reloadUser(user.id);
+    await reply(
+      user,
+      chatId,
+      "✅ دسترسی به بازاریابی و کیف پول فعال شد.",
+      mainMenu(user)
+    );
     return;
   }
 
