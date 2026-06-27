@@ -151,13 +151,16 @@ module.exports.showMonthStats = async function showMonthStats(
   const label = formatMonthLabel(yearMonth);
   const currentNote = isLive ? " (در جریان)" : "";
 
+  const netProfit = stats.totalProfit - stats.totalCommission;
+
   const text = [
     `📊 آمار فروش — ${label}${currentNote}`,
     "━━━━━━━━━━━━━━━━━━",
     `🛒 تعداد سفارشات: ${stats.orderCount}`,
     `💰 حجم فروش: ${stats.totalRevenue.toLocaleString("fa-IR")} تومان`,
-    `📈 سود خالص: ${stats.totalProfit.toLocaleString("fa-IR")} تومان`,
+    `📈 سود ناخالص: ${stats.totalProfit.toLocaleString("fa-IR")} تومان`,
     `🎁 مجموع پورسانت: ${stats.totalCommission.toLocaleString("fa-IR")} تومان`,
+    `✅ سود خالص: ${netProfit.toLocaleString("fa-IR")} تومان`,
   ].join("\n");
 
   await reply(user, chatId, text, adminMenu());
