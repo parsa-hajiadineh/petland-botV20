@@ -1,7 +1,7 @@
 const prisma = require("../database/prisma");
 const { ADMIN_BALE_IDS } = require("../config");
 const { reply, notify } = require("../bot/messenger");
-const { BTN, checkoutSkipMenu, paymentMenu, mainMenu, backMain, inlineKb } = require("../keyboards/menus");
+const { BTN, checkoutSkipMenu, paymentMenu, mainMenu, backMain, inlineKb, confirmAddressMenu } = require("../keyboards/menus");
 const bale = require("../bot/bale");
 const { validateCheckout } = require("./cart");
 const { getUnitPrice } = require("../utils/price");
@@ -30,6 +30,42 @@ module.exports.startCheckout = async function startCheckout(user, chatId) {
 
   if (!check.ok) {
     await reply(user, chatId, check.message);
+    return;
+  }
+
+  const savedAddresses = await prisma.savedAddress.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
+
+  if (savedAddresses.length > 0) {
+    const rows = savedAddresses.map((addr) => [
+      {
+        text: `📍 ${addr.fullName} | ${addr.city}`,
+        callback_data: `addr:view:${addr.id}`,
+      },
+    ]);
+    rows.push([{ text: "➕ آدرس جدید", callback_data: "addr:new" }]);
+
+    await reply(
+      user,
+      chatId,
+      "📦 ثبت سفارش\n\nیک آدرس ذخیره‌شده انتخاب کنید یا آدرس جدید وارد کنید:",
+      backMain()
+    );
+    const result = await bale.sendKeyboard(
+      chatId,
+      "آدرس‌های ذخیره‌شده شما:",
+      inlineKb(rows)
+    );
+    const msgId = result?.result?.message_id;
+    if (msgId) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastMessageId: msgId },
+      });
+    }
     return;
   }
 
@@ -174,6 +210,35 @@ async function finalizeOrder(user, chatId, description) {
     where: { cartId: fresh.cart.id },
   });
 
+  // ذخیره آدرس برای استفاده مجدد (حداکثر ۳ آدرس)
+  const savedCount = await prisma.savedAddress.count({
+    where: { userId: fresh.id },
+  });
+  if (savedCount < 3) {
+    const duplicateAddr = await prisma.savedAddress.findFirst({
+      where: {
+        userId: fresh.id,
+        fullName: fresh.fullName,
+        phone: fresh.phone,
+        city: fresh.tempCity,
+        address: fresh.tempAddress,
+      },
+    });
+    if (!duplicateAddr) {
+      await prisma.savedAddress.create({
+        data: {
+          fullName: fresh.fullName,
+          phone: fresh.phone,
+          province: fresh.tempProvince,
+          city: fresh.tempCity,
+          address: fresh.tempAddress,
+          postalCode: fresh.tempPostalCode || null,
+          userId: fresh.id,
+        },
+      });
+    }
+  }
+
   await prisma.user.update({
     where: { id: fresh.id },
     data: {
@@ -196,6 +261,97 @@ async function finalizeOrder(user, chatId, description) {
     paymentMenu()
   );
 }
+
+module.exports.handleSavedAddressView = async function handleSavedAddressView(
+  user,
+  chatId,
+  addressId
+) {
+  const addr = await prisma.savedAddress.findFirst({
+    where: { id: addressId, userId: user.id },
+  });
+
+  if (!addr) {
+    await reply(user, chatId, "❌ آدرس مورد نظر یافت نشد.", backMain());
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { orderStep: "ADDR_CONFIRM", tempAddressId: addr.id },
+  });
+
+  const text =
+    `📍 اطلاعات ارسال ذخیره‌شده:\n\n` +
+    `👤 نام: ${addr.fullName}\n` +
+    `📱 موبایل: ${addr.phone}\n` +
+    `🏙 استان: ${addr.province}\n` +
+    `🏘 شهر: ${addr.city}\n` +
+    `📍 آدرس: ${addr.address}` +
+    (addr.postalCode ? `\n📮 کد پستی: ${addr.postalCode}` : "");
+
+  await reply(user, chatId, text, confirmAddressMenu());
+};
+
+module.exports.confirmSavedAddress = async function confirmSavedAddress(
+  user,
+  chatId
+) {
+  if (user.orderStep !== "ADDR_CONFIRM" || !user.tempAddressId) {
+    await reply(user, chatId, "❌ لطفاً ابتدا یک آدرس از لیست انتخاب کنید.", backMain());
+    return;
+  }
+
+  const addr = await prisma.savedAddress.findFirst({
+    where: { id: user.tempAddressId, userId: user.id },
+  });
+
+  if (!addr) {
+    await reply(user, chatId, "❌ آدرس مورد نظر یافت نشد.", backMain());
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      fullName: addr.fullName,
+      phone: addr.phone,
+      tempProvince: addr.province,
+      tempCity: addr.city,
+      tempAddress: addr.address,
+      tempPostalCode: addr.postalCode || null,
+      tempAddressId: null,
+      orderStep: null,
+    },
+  });
+
+  const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+  await finalizeOrder(freshUser, chatId, null);
+};
+
+module.exports.deleteSavedAddress = async function deleteSavedAddress(
+  user,
+  chatId
+) {
+  if (!user.tempAddressId) {
+    await reply(user, chatId, "❌ آدرسی برای حذف انتخاب نشده است.", backMain());
+    return;
+  }
+
+  await prisma.savedAddress.deleteMany({
+    where: { id: user.tempAddressId, userId: user.id },
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { orderStep: null, tempAddressId: null },
+  });
+
+  await reply(user, chatId, "✅ آدرس ذخیره‌شده حذف شد.");
+
+  const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
+  await module.exports.startCheckout(updatedUser, chatId);
+};
 
 module.exports.handleReceiptPhoto = async function handleReceiptPhoto(
   user,

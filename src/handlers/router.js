@@ -163,6 +163,16 @@ module.exports = async function messageHandler(message, user) {
     return;
   }
 
+  if (text === BTN.CONFIRM_ADDRESS) {
+    await orderHandler.confirmSavedAddress(user, chatId);
+    return;
+  }
+
+  if (text === BTN.DELETE_ADDRESS) {
+    await orderHandler.deleteSavedAddress(user, chatId);
+    return;
+  }
+
   if (await orderHandler.handleCheckoutStep(user, chatId, text)) {
     return;
   }
@@ -204,6 +214,26 @@ module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user
     if (!shown) {
       await reply(user, chatId, "❌ سفارشی با این کد پیگیری یافت نشد.");
     }
+    return;
+  }
+
+  if (data.startsWith("addr:view:")) {
+    const addressId = data.replace("addr:view:", "");
+    await orderHandler.handleSavedAddressView(user, chatId, addressId);
+    return;
+  }
+
+  if (data === "addr:new") {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { orderStep: "CHECKOUT_NAME", tempAddressId: null },
+    });
+    await reply(
+      user,
+      chatId,
+      "📝 ثبت سفارش\n\n👤 نام و نام خانوادگی گیرنده را وارد کنید:",
+      backMain()
+    );
     return;
   }
 

@@ -35,6 +35,9 @@ const BTN = {
   PACK: "📦 بسته‌بندی شد",
   SHIP: "🚚 ثبت ارسال",
   SET_IMAGE: "🖼 تنظیم عکس محصول",
+  CONFIRM_ADDRESS: "✅ اطلاعات ارسال مورد تایید است",
+  DELETE_ADDRESS: "🗑 حذف مشخصات ثبت شده",
+  NEW_ADDRESS: "➕ آدرس جدید",
 };
 
 function kb(rows) {
@@ -169,6 +172,14 @@ function activeTicketMenu() {
   ]);
 }
 
+function confirmAddressMenu() {
+  return kb([
+    [{ text: BTN.CONFIRM_ADDRESS }],
+    [{ text: BTN.DELETE_ADDRESS }],
+    [{ text: BTN.BACK_MAIN }],
+  ]);
+}
+
 module.exports = {
   BTN,
   inlineKb,
@@ -185,5 +196,6 @@ module.exports = {
   adminTicketsMenu,
   supportMenu,
   activeTicketMenu,
+  confirmAddressMenu,
   kb,
 };

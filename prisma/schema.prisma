@@ -60,6 +60,7 @@ model User {
   tempPostalCode  String?
   tempDescription String?
   tempQuantity    Int?
+  tempAddressId   String?
 
   adminStep       String?
 
@@ -74,6 +75,7 @@ model User {
 
   cart            Cart?
   wallet          Wallet?
+  savedAddresses  SavedAddress[]
 }
 model Category {
   id           String    @id @default(cuid())
@@ -241,4 +243,21 @@ model Withdrawal {
 
   @@index([walletId])
   @@index([status])
+}
+
+model SavedAddress {
+  id          String   @id @default(cuid())
+  fullName    String
+  phone       String
+  province    String
+  city        String
+  address     String
+  postalCode  String?
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
 }
