@@ -47,7 +47,7 @@ module.exports.startWithdrawal = async function startWithdrawal(user, chatId) {
   await reply(
     user,
     chatId,
-    `💳 درخواست برداشت\n\nلطفاً مبلغ مورد نظر را وارد کنید:\n\n⚠️ رقم را حتماً به تومان تایپ کنید\nحداقل: ${MIN_WITHDRAWAL.toLocaleString("fa-IR")} تومان\nحداکثر: ${MAX_WITHDRAWAL.toLocaleString("fa-IR")} تومان\nموجودی شما: ${wallet.balance.toLocaleString("fa-IR")} تومان`,
+    `💳 درخواست برداشت\n\nلطفاً مبلغ مورد نظر را وارد کنید:\n\n⚠️ رقم را با اعداد انگلیسی، بدون استفاده از حروف و حتماً به تومان تایپ کنید\nحداقل: ${MIN_WITHDRAWAL.toLocaleString("fa-IR")} تومان\nحداکثر: ${MAX_WITHDRAWAL.toLocaleString("fa-IR")} تومان\nموجودی شما: ${wallet.balance.toLocaleString("fa-IR")} تومان`,
     backMain()
   );
 };
