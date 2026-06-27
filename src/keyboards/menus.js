@@ -30,6 +30,7 @@ const BTN = {
   TICKET_ANSWERED: "📬 پاسخ داده شده",
   ADMIN_PRODUCTS: "📦 مدیریت محصولات",
   ADMIN_WITHDRAWALS: "💸 درخواست‌های پورسانت",
+  ADMIN_SALES: "📊 آمار فروش",
   APPROVE: "✅ تایید فاکتور",
   REJECT: "❌ رد فاکتور",
   PACK: "📦 بسته‌بندی شد",
@@ -132,6 +133,7 @@ function adminMenu() {
     [{ text: BTN.ADMIN_TICKETS }],
     [{ text: BTN.ADMIN_PRODUCTS }],
     [{ text: BTN.ADMIN_WITHDRAWALS }],
+    [{ text: BTN.ADMIN_SALES }],
     [{ text: BTN.BACK_MAIN }],
   ]);
 }
