@@ -261,13 +261,3 @@ model SavedAddress {
 
   @@index([userId])
 }
-
-model MonthlySalesReport {
-  id              String   @id @default(cuid())
-  yearMonth       String   @unique
-  totalRevenue    Int      @default(0)
-  totalProfit     Int      @default(0)
-  totalCommission Int      @default(0)
-  orderCount      Int      @default(0)
-  createdAt       DateTime @default(now())
-}

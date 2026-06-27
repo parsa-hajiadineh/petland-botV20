@@ -290,14 +290,6 @@ module.exports.handleCallbackQuery = async function handleCallbackQuery(cq, user
     return;
   }
 
-  if (data.startsWith("stats:") && isAdmin(user)) {
-    const parts = data.split(":");
-    const yearMonth = parts[1];
-    const isLive = parts[2] === "live";
-    await adminHandler.showMonthStats(user, chatId, yearMonth, isLive);
-    return;
-  }
-
   if (data.startsWith("rej_more:") && isAdmin(user)) {
     const offset = parseInt(data.replace("rej_more:", ""), 10) || 0;
     await adminHandler.showRejectedOrders(user, chatId, offset);

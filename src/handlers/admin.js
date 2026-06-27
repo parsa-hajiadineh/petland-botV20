@@ -11,159 +11,11 @@ const {
   inlineKb,
   kb,
   backMain,
-} = require("../keyboards/menus");const { buildInvoiceText, generateInvoicePdf } = require("../utils/invoice");
+} = require("../keyboards/menus");
+const { buildInvoiceText, generateInvoicePdf } = require("../utils/invoice");
 const { statusLabel } = require("../utils/order");
 const { notifyOrderStatus } = require("./order");
 const { getOrCreateWallet } = require("./wallet");
-
-// ─── Sales Stats Helpers ─────────────────────────────────────────────────────
-
-function toYearMonth(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function formatMonthLabel(yearMonth) {
-  const [year, month] = yearMonth.split("-").map(Number);
-  const date = new Date(year, month - 1, 1);
-  return date.toLocaleDateString("fa-IR", { year: "numeric", month: "long" });
-}
-
-async function calcMonthStats(yearMonth) {
-  const [year, month] = yearMonth.split("-").map(Number);
-  const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 1);
-
-  const orders = await prisma.order.findMany({
-    where: {
-      createdAt: { gte: start, lt: end },
-      status: { in: ["APPROVED", "PACKAGING", "SHIPPED", "DELIVERED"] },
-    },
-    include: {
-      items: { include: { product: { select: { costPrice: true } } } },
-      user: { select: { referrerId: true } },
-    },
-  });
-
-  let totalRevenue = 0;
-  let totalProfit = 0;
-  let totalCommission = 0;
-
-  for (const order of orders) {
-    totalRevenue += order.totalAmount;
-
-    for (const item of order.items) {
-      totalProfit += (item.unitPrice - item.product.costPrice) * item.quantity;
-    }
-
-    if (order.user?.referrerId) {
-      const commission = Math.floor(order.totalAmount * 0.05);
-      totalCommission += commission;
-    }
-  }
-
-  return { totalRevenue, totalProfit, totalCommission, orderCount: orders.length };
-}
-
-async function archiveOldMonths() {
-  const now = new Date();
-
-  // Archive past months (up to 6) that haven't been saved yet
-  for (let i = 1; i <= 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const ym = toYearMonth(d);
-
-    const existing = await prisma.monthlySalesReport.findUnique({
-      where: { yearMonth: ym },
-    });
-
-    if (!existing) {
-      const stats = await calcMonthStats(ym);
-      await prisma.monthlySalesReport.create({
-        data: { yearMonth: ym, ...stats },
-      });
-    }
-  }
-
-  // Delete reports older than 6 months
-  const cutoffDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-  const cutoffYM = toYearMonth(cutoffDate);
-  await prisma.monthlySalesReport.deleteMany({
-    where: { yearMonth: { lt: cutoffYM } },
-  });
-}
-
-async function showSalesStats(user, chatId) {
-  await archiveOldMonths();
-
-  const now = new Date();
-  const currentYM = toYearMonth(now);
-
-  const reports = await prisma.monthlySalesReport.findMany({
-    orderBy: { yearMonth: "desc" },
-    take: 6,
-  });
-
-  const rows = [];
-
-  // Current month (live)
-  rows.push([{
-    text: `📊 ${formatMonthLabel(currentYM)} (جاری)`,
-    callback_data: `stats:${currentYM}:live`,
-  }]);
-
-  // Archived months
-  for (const r of reports) {
-    rows.push([{
-      text: `📅 ${formatMonthLabel(r.yearMonth)}`,
-      callback_data: `stats:${r.yearMonth}:arch`,
-    }]);
-  }
-
-  await reply(
-    user,
-    chatId,
-    "📊 آمار فروش\n\nماه مورد نظر را انتخاب کنید:",
-    inlineKb(rows)
-  );
-}
-
-module.exports.showMonthStats = async function showMonthStats(
-  user,
-  chatId,
-  yearMonth,
-  isLive
-) {
-  let stats;
-
-  if (isLive) {
-    stats = await calcMonthStats(yearMonth);
-  } else {
-    const report = await prisma.monthlySalesReport.findUnique({
-      where: { yearMonth },
-    });
-    if (!report) {
-      await reply(user, chatId, "❌ آمار این ماه موجود نیست.", adminMenu());
-      return;
-    }
-    stats = report;
-  }
-
-  const label = formatMonthLabel(yearMonth);
-  const currentNote = isLive ? " (در جریان)" : "";
-
-  const text = [
-    `📊 آمار فروش — ${label}${currentNote}`,
-    "━━━━━━━━━━━━━━━━━━",
-    `🛒 تعداد سفارشات: ${stats.orderCount}`,
-    `💰 حجم فروش: ${stats.totalRevenue.toLocaleString("fa-IR")} تومان`,
-    `📈 سود خالص: ${stats.totalProfit.toLocaleString("fa-IR")} تومان`,
-    `🎁 مجموع پورسانت: ${stats.totalCommission.toLocaleString("fa-IR")} تومان`,
-  ].join("\n");
-
-  await reply(user, chatId, text, adminMenu());
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 module.exports.showAdminPanel = async function showAdminPanel(user, chatId) {
   await reply(user, chatId, "⚙️ پنل ادمین", adminMenu());
@@ -231,11 +83,6 @@ module.exports.handleAdmin = async function handleAdmin(user, chatId, text) {
 
   if (text === BTN.ADMIN_WITHDRAWALS) {
     await showPendingWithdrawals(user, chatId);
-    return true;
-  }
-
-  if (text === BTN.ADMIN_SALES) {
-    await showSalesStats(user, chatId);
     return true;
   }
 
