@@ -17,7 +17,7 @@ const PRODUCT_CATEGORIES = [
     ],
   },
   {
-    btn: "🩺 غذای درمانی",
+    btn: "🩺 غذاهای درمانی و رژیمی",
     subMenus: [
       "رویال کنین (Royal Canin)",
       "مونژه (Monge)",
@@ -41,7 +41,7 @@ const PRODUCT_CATEGORIES = [
     ],
   },
   {
-    btn: "🍖 تشویقی و مکمل غذایی",
+    btn: "🍖 تشویقی، اسنک و مکمل غذایی",
     subMenus: [
       "جیم کت (GimCat)",
       "ونپی (Wanpy)",
@@ -55,7 +55,7 @@ const PRODUCT_CATEGORIES = [
     ],
   },
   {
-    btn: "💊 مکمل و دارو",
+    btn: "💊 مکمل، دارو و محصولات درمانی",
     subMenus: [
       "Vet Expert",
       "Beaphar",
@@ -73,7 +73,7 @@ const PRODUCT_CATEGORIES = [
     ],
   },
   {
-    btn: "🎾 اسباب‌بازی",
+    btn: "🎾 اسباب‌بازی سگ و گربه",
     subMenus: [
       "اسباب‌بازی گربه",
       "اسباب‌بازی سگ",
@@ -97,7 +97,7 @@ const PRODUCT_CATEGORIES = [
     ],
   },
   {
-    btn: "🏠 لوازم نگهداری",
+    btn: "🏠 لوازم نگهداری و خانه حیوان",
     subMenus: [
       "توالت و لوازم خاک",
       "پارک و استراحت",
@@ -110,7 +110,6 @@ const PRODUCT_CATEGORIES = [
       "پرزگیر",
       "برس و فرمیناتور",
       "لوازم نظافت",
-      "لوازم نگهداری مو",
     ],
   },
 ];
