@@ -45,52 +45,15 @@ module.exports.showBrandProducts = async function showBrandProducts(
   categoryBtn,
   brand
 ) {
-  const compositeTitle = `${categoryBtn} / ${brand}`;
-  const category = await prisma.category.findFirst({
-    where: { title: compositeTitle },
-  });
-
-  const parentCat = PRODUCT_CATEGORIES.find((c) => c.btn === categoryBtn);
-  const backKb = subMenuKb(parentCat ? parentCat.subMenus : []);
-
-  if (!category) {
-    await reply(user, chatId, "در این بخش محصولی ثبت نشده است.", backKb);
-    return;
-  }
-
-  const products = await prisma.product.findMany({
-    where: { categoryId: category.id },
-    orderBy: { title: "asc" },
-  });
-
-  if (products.length === 0) {
-    await reply(user, chatId, "در این بخش محصولی وجود ندارد.", backKb);
-    return;
-  }
-
-  const wholesale = isWholesaleUser(user);
-  const productRows = products.map((product) => {
-    const price = getUnitPrice(product, wholesale);
-    const availability = product.status === "AVAILABLE" ? "🟢" : "🔴";
-    const label = `${availability} ${product.title} | ${formatPrice(price)}`;
-    return [{ text: label, callback_data: `product:${product.code}` }];
-  });
-
-  await reply(user, chatId, `📦 ${brand}`, backKb);
-
-  const inlineResult = await bale.sendKeyboard(
+  // نمایش محصولات بر اساس دسته‌بندی و برند — در مرحله بعدی محصولات اضافه می‌شوند
+  await reply(
+    user,
     chatId,
-    `${products.length} محصول — روی هر محصول برای جزئیات کلیک کنید:`,
-    inlineKb(productRows)
+    `📦 محصولات «${brand}»\nدسته: ${categoryBtn}\n\nمحصولات این بخش به زودی اضافه می‌شوند.`,
+    subMenuKb(
+      (PRODUCT_CATEGORIES.find((c) => c.btn === categoryBtn) || { subMenus: [] }).subMenus
+    )
   );
-
-  const inlineMsgId = inlineResult?.result?.message_id;
-  if (inlineMsgId) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastMessageId: inlineMsgId },
-    });
-  }
 };
 
 module.exports.showCategory = async function showCategory(
