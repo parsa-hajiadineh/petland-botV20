@@ -3,19 +3,20 @@ const productData = require("./data/products");
 const { DEFAULT_PROFIT_PERCENT } = require("./config");
 
 async function main() {
+  console.log("Clearing existing data...");
+  await prisma.cartItem.deleteMany({});
+  await prisma.orderItem.deleteMany({});
+  await prisma.product.deleteMany({});
+  await prisma.category.deleteMany({});
+  console.log("Existing products and categories cleared.");
+
   console.log("Seeding categories and products...");
 
   for (const group of productData) {
-    let category = await prisma.category.findFirst({
-      where: { title: group.category },
+    const category = await prisma.category.create({
+      data: { title: group.category },
     });
-
-    if (!category) {
-      category = await prisma.category.create({
-        data: { title: group.category },
-      });
-      console.log("Category created:", group.category);
-    }
+    console.log("Category created:", group.category);
 
     for (const item of group.items) {
       const status =
@@ -25,19 +26,21 @@ async function main() {
         where: { code: item.code },
         update: {
           title: item.title,
+          description: item.description || null,
           costPrice: item.costPrice || 0,
           profitPercent:
             item.profitPercent ?? DEFAULT_PROFIT_PERCENT,
-          status: item.status || status,
+          status: item.status || "AVAILABLE",
           categoryId: category.id,
         },
         create: {
           code: item.code,
           title: item.title,
+          description: item.description || null,
           costPrice: item.costPrice || 0,
           profitPercent:
             item.profitPercent ?? DEFAULT_PROFIT_PERCENT,
-          status: item.status || status,
+          status: item.status || "AVAILABLE",
           categoryId: category.id,
         },
       });
