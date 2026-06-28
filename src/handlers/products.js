@@ -1,7 +1,15 @@
 const prisma = require("../database/prisma");
 const { reply, replyPhoto } = require("../bot/messenger");
 const bale = require("../bot/bale");
-const { BTN, kb, inlineKb, productDetailMenu } = require("../keyboards/menus");
+const {
+  BTN,
+  kb,
+  inlineKb,
+  productDetailMenu,
+  PRODUCT_CATEGORIES,
+  productCategoriesMenu,
+  subMenuKb,
+} = require("../keyboards/menus");
 const {
   getUnitPrice,
   formatPrice,
@@ -9,26 +17,42 @@ const {
 } = require("../utils/price");
 
 module.exports = async function productsHandler(user, chatId) {
-  const categories = await prisma.category.findMany({
-    orderBy: { title: "asc" },
-  });
-
-  if (categories.length === 0) {
-    await reply(user, chatId, "❌ هیچ دسته‌بندی ثبت نشده است.");
-    return;
-  }
-
-  const rows = categories.map((cat) => [
-    { text: `📂 ${cat.title}` },
-  ]);
-
-  rows.push([{ text: BTN.BACK_MAIN }]);
-
   await reply(
     user,
     chatId,
     "🛍 دسته‌بندی مورد نظر را انتخاب کنید:",
-    kb(rows)
+    productCategoriesMenu()
+  );
+};
+
+module.exports.showSubMenu = async function showSubMenu(user, chatId, categoryBtn) {
+  const cat = PRODUCT_CATEGORIES.find((c) => c.btn === categoryBtn);
+  if (!cat) {
+    await reply(user, chatId, "دسته‌بندی پیدا نشد.");
+    return;
+  }
+  await reply(
+    user,
+    chatId,
+    `${categoryBtn}\n\nیکی از زیر دسته‌ها را انتخاب کنید:`,
+    subMenuKb(cat.subMenus)
+  );
+};
+
+module.exports.showBrandProducts = async function showBrandProducts(
+  user,
+  chatId,
+  categoryBtn,
+  brand
+) {
+  // نمایش محصولات بر اساس دسته‌بندی و برند — در مرحله بعدی محصولات اضافه می‌شوند
+  await reply(
+    user,
+    chatId,
+    `📦 محصولات «${brand}»\nدسته: ${categoryBtn}\n\nمحصولات این بخش به زودی اضافه می‌شوند.`,
+    subMenuKb(
+      (PRODUCT_CATEGORIES.find((c) => c.btn === categoryBtn) || { subMenus: [] }).subMenus
+    )
   );
 };
 

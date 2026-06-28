@@ -1,3 +1,120 @@
+const PRODUCT_CATEGORIES = [
+  {
+    btn: "🐱 غذای خشک گربه",
+    subMenus: [
+      "رویال کنین (Royal Canin)",
+      "مونژه (Monge)",
+      "جمون (Gemon)",
+      "سیمبا (Simba)",
+    ],
+  },
+  {
+    btn: "🐶 غذای خشک سگ",
+    subMenus: [
+      "رویال کنین (Royal Canin)",
+      "مونژه (Monge)",
+      "جمون (Gemon)",
+    ],
+  },
+  {
+    btn: "🩺 غذای درمانی",
+    subMenus: [
+      "رویال کنین (Royal Canin)",
+      "مونژه (Monge)",
+    ],
+  },
+  {
+    btn: "🥫 کنسرو، پوچ و ووم",
+    subMenus: [
+      "رویال کنین (Royal Canin)",
+      "مونژه (Monge)",
+      "جمون (Gemon)",
+      "سیمبا (Simba)",
+      "جیم کت (GimCat)",
+      "جیم داگ (GimDog)",
+      "ونپی (Wanpy)",
+      "گورمت (Gourmet)",
+      "ویسکاس (Whiskas)",
+      "فلیکسی (Flexi)",
+      "لئو (Leo)",
+      "وینستون (Winston)",
+    ],
+  },
+  {
+    btn: "🍖 تشویقی و مکمل غذایی",
+    subMenus: [
+      "جیم کت (GimCat)",
+      "ونپی (Wanpy)",
+      "جوسرا (Josera)",
+      "دریمیز (Dreamies)",
+      "تریکسی (Trixie)",
+      "وینستون (Winston)",
+      "جوسی (Josi)",
+      "نالرز (Nalers)",
+      "سایر تشویقی‌ها",
+    ],
+  },
+  {
+    btn: "💊 مکمل و دارو",
+    subMenus: [
+      "Vet Expert",
+      "Beaphar",
+      "Bravecto",
+      "Vetmedin",
+      "Apoquel",
+      "سایر محصولات درمانی",
+    ],
+  },
+  {
+    btn: "🧴 شامپو و محصولات بهداشتی",
+    subMenus: [
+      "Vet Expert",
+      "سایر محصولات بهداشتی",
+    ],
+  },
+  {
+    btn: "🎾 اسباب‌بازی",
+    subMenus: [
+      "اسباب‌بازی گربه",
+      "اسباب‌بازی سگ",
+      "اسباب‌بازی مشترک سگ و گربه",
+    ],
+  },
+  {
+    btn: "🚗 حمل و سفر",
+    subMenus: [
+      "کوله و باکس حمل",
+      "قمقمه و آبخوری سفری",
+      "لوازم سفر",
+    ],
+  },
+  {
+    btn: "🍽️ ظروف غذا و آب",
+    subMenus: [
+      "آبخوری اتوماتیک",
+      "فیلتر آبخوری",
+      "ظروف و زیرانداز غذا",
+    ],
+  },
+  {
+    btn: "🏠 لوازم نگهداری",
+    subMenus: [
+      "توالت و لوازم خاک",
+      "پارک و استراحت",
+      "قلاده و لوازم جانبی",
+    ],
+  },
+  {
+    btn: "✂️ نظافت و آرایش",
+    subMenus: [
+      "پرزگیر",
+      "برس و فرمیناتور",
+      "لوازم نظافت",
+      "لوازم نگهداری مو",
+    ],
+  },
+];
+
 const BTN = {
   PRODUCTS: "🛍 محصولات",
   CART: "🛒 سبد خرید",
@@ -185,12 +302,28 @@ function confirmAddressMenu() {
   ]);
 }
 
+function productCategoriesMenu() {
+  const rows = PRODUCT_CATEGORIES.map((cat) => [{ text: cat.btn }]);
+  rows.push([{ text: BTN.BACK_MAIN }]);
+  return kb(rows);
+}
+
+function subMenuKb(subMenuItems) {
+  const rows = subMenuItems.map((item) => [{ text: item }]);
+  rows.push([{ text: BTN.BACK_PRODUCTS }]);
+  rows.push([{ text: BTN.BACK_MAIN }]);
+  return kb(rows);
+}
+
 module.exports = {
   BTN,
+  PRODUCT_CATEGORIES,
   inlineKb,
   mainMenu,
   backMain,
   productDetailMenu,
+  productCategoriesMenu,
+  subMenuKb,
   cartMenu,
   checkoutSkipMenu,
   paymentMenu,

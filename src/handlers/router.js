@@ -1,7 +1,7 @@
 const prisma = require("../database/prisma");
 const { reloadUser } = require("../services/user");
 const { isAdmin } = require("../services/user");
-const { BTN, backMain, mainMenu } = require("../keyboards/menus");
+const { BTN, backMain, mainMenu, PRODUCT_CATEGORIES } = require("../keyboards/menus");
 const { reply } = require("../bot/messenger");
 const { MARKETING_ACCESS_CODE } = require("../config");
 
@@ -78,6 +78,13 @@ module.exports = async function messageHandler(message, user) {
   }
 
   if (text === BTN.PRODUCTS || text === BTN.BACK_PRODUCTS) {
+    if (user.orderStep && user.orderStep.startsWith("CAT:")) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { orderStep: null },
+      });
+      user = await reloadUser(user.id);
+    }
     await productsHandler(user, chatId);
     return;
   }
@@ -178,13 +185,23 @@ module.exports = async function messageHandler(message, user) {
     return;
   }
 
-  if (text.startsWith("📂 ")) {
-    await productsHandler.showCategory(
-      user,
-      chatId,
-      text.replace("📂 ", "")
-    );
+  const mainCat = PRODUCT_CATEGORIES.find((c) => c.btn === text);
+  if (mainCat) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { orderStep: `CAT:${mainCat.btn}` },
+    });
+    await productsHandler.showSubMenu(user, chatId, mainCat.btn);
     return;
+  }
+
+  if (user.orderStep && user.orderStep.startsWith("CAT:")) {
+    const parentCatBtn = user.orderStep.replace("CAT:", "");
+    const parentCat = PRODUCT_CATEGORIES.find((c) => c.btn === parentCatBtn);
+    if (parentCat && parentCat.subMenus.includes(text)) {
+      await productsHandler.showBrandProducts(user, chatId, parentCatBtn, text);
+      return;
+    }
   }
 
   const product = await prisma.product.findUnique({
