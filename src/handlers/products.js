@@ -214,6 +214,63 @@ ${
   }
 };
 
+module.exports.handleSearch = async function handleSearch(user, chatId, query) {
+  const term = (query || "").trim();
+  if (!term || term.length < 2) {
+    await reply(user, chatId, "⚠️ حداقل ۲ حرف وارد کن.", kb([[{ text: BTN.BACK_MAIN }]]));
+    return;
+  }
+
+  const products = await prisma.product.findMany({
+    where: {
+      title: { contains: term, mode: "insensitive" },
+      status: "AVAILABLE",
+    },
+    include: { category: true },
+    orderBy: { title: "asc" },
+    take: 30,
+  });
+
+  if (products.length === 0) {
+    await reply(
+      user,
+      chatId,
+      `🔍 نتیجه‌ای برای «${term}» یافت نشد.\nنام دیگری امتحان کن.`,
+      kb([[{ text: BTN.SEARCH }], [{ text: BTN.BACK_MAIN }]])
+    );
+    return;
+  }
+
+  const wholesale = isWholesaleUser(user);
+
+  const productRows = products.map((product) => {
+    const price = getUnitPrice(product, wholesale);
+    const label = `🟢 ${product.title} | ${formatPrice(price)}`;
+    return [{ text: label, callback_data: `product:${product.code}` }];
+  });
+
+  await reply(
+    user,
+    chatId,
+    `🔍 نتایج جستجو برای «${term}» — ${products.length} محصول:`,
+    kb([[{ text: BTN.SEARCH }], [{ text: BTN.BACK_MAIN }]])
+  );
+
+  const inlineResult = await bale.sendKeyboard(
+    chatId,
+    "روی هر محصول برای جزئیات کلیک کنید:",
+    inlineKb(productRows)
+  );
+
+  const inlineMsgId = inlineResult?.result?.message_id;
+  if (inlineMsgId) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastMessageId: inlineMsgId },
+    });
+  }
+};
+
 module.exports.startAddToCart = async function startAddToCart(user, chatId) {
   if (!user.lastProductCode) {
     await reply(user, chatId, "محصولی انتخاب نشده است.");

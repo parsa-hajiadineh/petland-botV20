@@ -1,7 +1,7 @@
 const prisma = require("../database/prisma");
 const { reloadUser } = require("../services/user");
 const { isAdmin } = require("../services/user");
-const { BTN, backMain, mainMenu, PRODUCT_CATEGORIES } = require("../keyboards/menus");
+const { BTN, kb, backMain, mainMenu, PRODUCT_CATEGORIES } = require("../keyboards/menus");
 const { reply } = require("../bot/messenger");
 const { MARKETING_ACCESS_CODE } = require("../config");
 
@@ -74,6 +74,30 @@ module.exports = async function messageHandler(message, user) {
 
   if (text === BTN.WITHDRAW_HISTORY) {
     await walletHandler.showWithdrawalHistory(user, chatId);
+    return;
+  }
+
+  if (text === BTN.SEARCH) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { orderStep: "SEARCH" },
+    });
+    await reply(
+      user,
+      chatId,
+      "🔍 نام یا بخشی از نام محصول مورد نظرت را بنویس:",
+      kb([[{ text: BTN.BACK_MAIN }]])
+    );
+    return;
+  }
+
+  if (user.orderStep === "SEARCH") {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { orderStep: null },
+    });
+    user = await reloadUser(user.id);
+    await productsHandler.handleSearch(user, chatId, text);
     return;
   }
 

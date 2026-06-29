@@ -125,6 +125,7 @@ const BTN = {
   WALLET: "💰 کیف پول",
   WITHDRAW_NEW: "💳 درخواست برداشت جدید",
   WITHDRAW_HISTORY: "📋 تاریخچه برداشت",
+  SEARCH: "🔍 جستجوی سریع",
   BACK_MAIN: "🏠 بازگشت به منوی اصلی",
   BACK_PRODUCTS: "🔙 بازگشت به دسته‌بندی‌ها",
   ADD_CART: "➕ افزودن به سبد",
@@ -170,7 +171,7 @@ function inlineKb(rows) {
 
 function mainMenu(user) {
   const rows = [
-    [{ text: BTN.PRODUCTS }],
+    [{ text: BTN.PRODUCTS }, { text: BTN.SEARCH }],
     [{ text: BTN.CART }, { text: BTN.ORDERS }],
     [{ text: BTN.SUPPORT }, { text: BTN.HELP }],
   ];
