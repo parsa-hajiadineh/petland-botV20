@@ -45,15 +45,64 @@ module.exports.showBrandProducts = async function showBrandProducts(
   categoryBtn,
   brand
 ) {
-  // نمایش محصولات بر اساس دسته‌بندی و برند — در مرحله بعدی محصولات اضافه می‌شوند
+  const category = await prisma.category.findFirst({
+    where: { title: categoryBtn },
+  });
+
+  if (!category) {
+    await reply(user, chatId, "دسته‌بندی پیدا نشد.");
+    return;
+  }
+
+  const products = await prisma.product.findMany({
+    where: { categoryId: category.id, brand },
+    orderBy: { title: "asc" },
+  });
+
+  if (products.length === 0) {
+    await reply(
+      user,
+      chatId,
+      `📦 محصولات «${brand}»\nدسته: ${categoryBtn}\n\nمحصولی در این بخش یافت نشد.`,
+      subMenuKb(
+        (PRODUCT_CATEGORIES.find((c) => c.btn === categoryBtn) || { subMenus: [] }).subMenus
+      )
+    );
+    return;
+  }
+
+  const wholesale = isWholesaleUser(user);
+
+  const productRows = products.map((product) => {
+    const price = getUnitPrice(product, wholesale);
+    const availability = product.status === "AVAILABLE" ? "🟢" : "🔴";
+    const label = `${availability} ${product.title} | ${formatPrice(price)}`;
+    return [{ text: label, callback_data: `product:${product.code}` }];
+  });
+
   await reply(
     user,
     chatId,
-    `📦 محصولات «${brand}»\nدسته: ${categoryBtn}\n\nمحصولات این بخش به زودی اضافه می‌شوند.`,
-    subMenuKb(
-      (PRODUCT_CATEGORIES.find((c) => c.btn === categoryBtn) || { subMenus: [] }).subMenus
-    )
+    `📂 ${categoryBtn} › ${brand}`,
+    kb([
+      [{ text: BTN.BACK_PRODUCTS }],
+      [{ text: BTN.BACK_MAIN }],
+    ])
   );
+
+  const inlineResult = await bale.sendKeyboard(
+    chatId,
+    `${products.length} محصول — روی هر محصول برای جزئیات کلیک کنید:`,
+    inlineKb(productRows)
+  );
+
+  const inlineMsgId = inlineResult?.result?.message_id;
+  if (inlineMsgId) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastMessageId: inlineMsgId },
+    });
+  }
 };
 
 module.exports.showCategory = async function showCategory(

@@ -95,6 +95,7 @@ model Product {
 
   costPrice       Int
   profitPercent   Int
+  brand           String?
 
   status          ProductStatus @default(AVAILABLE)
 

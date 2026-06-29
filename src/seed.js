@@ -12,25 +12,29 @@ async function main() {
 
   console.log("Seeding categories and products...");
 
+  // کش دسته‌بندی‌ها برای جلوگیری از ساخت رکورد تکراری با نام یکسان
+  const categoryCache = {};
+
   for (const group of productData) {
-    const category = await prisma.category.create({
-      data: { title: group.category },
-    });
-    console.log("Category created:", group.category);
+    let category = categoryCache[group.category];
+    if (!category) {
+      category = await prisma.category.create({
+        data: { title: group.category },
+      });
+      categoryCache[group.category] = category;
+      console.log("Category created:", group.category);
+    }
 
     for (const item of group.items) {
-      const status =
-        item.costPrice > 0 ? "AVAILABLE" : "UNAVAILABLE";
-
       await prisma.product.upsert({
         where: { code: item.code },
         update: {
           title: item.title,
           description: item.description || null,
           costPrice: item.costPrice || 0,
-          profitPercent:
-            item.profitPercent ?? DEFAULT_PROFIT_PERCENT,
+          profitPercent: item.profitPercent ?? DEFAULT_PROFIT_PERCENT,
           status: item.status || "AVAILABLE",
+          brand: group.brand || null,
           categoryId: category.id,
         },
         create: {
@@ -38,9 +42,9 @@ async function main() {
           title: item.title,
           description: item.description || null,
           costPrice: item.costPrice || 0,
-          profitPercent:
-            item.profitPercent ?? DEFAULT_PROFIT_PERCENT,
+          profitPercent: item.profitPercent ?? DEFAULT_PROFIT_PERCENT,
           status: item.status || "AVAILABLE",
+          brand: group.brand || null,
           categoryId: category.id,
         },
       });
